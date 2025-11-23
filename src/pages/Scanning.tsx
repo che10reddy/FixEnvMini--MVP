@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ScanningSkeleton from "@/components/ScanningSkeleton";
 
 const steps = [
   "Fetching repository",
@@ -14,7 +15,17 @@ const steps = [
 
 const Scanning = () => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Initial loading delay
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(loadingTimer);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -36,7 +47,10 @@ const Scanning = () => {
     <main className="min-h-screen bg-background flex flex-col">
       <Header />
       <section className="flex items-center justify-center px-4 py-12 pt-24 min-h-screen flex-1">
-        <div className="max-w-3xl w-full text-center space-y-8 animate-fade-in">
+        {isLoading ? (
+          <ScanningSkeleton />
+        ) : (
+          <div className="max-w-3xl w-full text-center space-y-8 animate-fade-in">
           {/* Hero Title */}
           <div className="space-y-4">
             <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight">
@@ -106,7 +120,8 @@ const Scanning = () => {
           <p className="text-sm text-muted-foreground">
             This may take a few seconds…
           </p>
-        </div>
+          </div>
+        )}
       </section>
       <Footer />
     </main>
