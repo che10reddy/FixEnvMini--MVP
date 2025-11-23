@@ -39,26 +39,28 @@ const Hero = () => {
         </div>
 
         <div className="max-w-4xl mx-auto space-y-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Github className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="url"
-                placeholder="https://github.com/username/repo"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                className="h-14 pl-12 bg-codeBg border-border text-foreground placeholder:text-muted-foreground code-font text-base"
-                onKeyDown={(e) => e.key === "Enter" && handleScan()}
-              />
+          <div className="border border-border/50 rounded-xl p-6 backdrop-blur-sm shadow-[0_0_20px_rgba(76,201,240,0.15)]">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Github className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="url"
+                  placeholder="https://github.com/username/repo"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  className="h-14 pl-12 bg-codeBg border-border text-foreground placeholder:text-muted-foreground code-font text-base"
+                  onKeyDown={(e) => e.key === "Enter" && handleScan()}
+                />
+              </div>
+              <Button 
+                onClick={handleScan}
+                size="lg"
+                className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
+              >
+                <Search className="w-5 h-5" />
+                Scan Repository
+              </Button>
             </div>
-            <Button 
-              onClick={handleScan}
-              size="lg"
-              className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
-            >
-              <Search className="w-5 h-5" />
-              Scan Repository
-            </Button>
           </div>
           <p className="text-sm text-muted-foreground text-center">
             No installation required • Instant analysis • Python-only (MVP)
