@@ -36,7 +36,7 @@ const Footer = () => {
               <span className="text-sm font-medium">Docs</span>
             </a>
             <a
-              href="mailto:contact@fixenv.dev"
+              href="mailto:che10guduru@gmail.com"
               className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
             >
               <Mail className="w-5 h-5" />
