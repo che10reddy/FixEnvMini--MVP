@@ -3,7 +3,6 @@ import { useEffect, useRef } from "react";
 const FloatingParticles = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
-  const clickRef = useRef<{ x: number; y: number; timestamp: number } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -32,17 +31,8 @@ const FloatingParticles = () => {
       mouseRef.current = { x: -1000, y: -1000 };
     };
 
-    const handleClick = (e: MouseEvent) => {
-      clickRef.current = {
-        x: e.clientX,
-        y: e.clientY,
-        timestamp: Date.now(),
-      };
-    };
-
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseleave", handleMouseLeave);
-    window.addEventListener("click", handleClick);
 
     // Particle class
     class Particle {
@@ -63,7 +53,7 @@ const FloatingParticles = () => {
         this.speedY = Math.random() * 0.5 - 0.25;
         this.baseSpeedX = this.speedX;
         this.baseSpeedY = this.speedY;
-        this.opacity = Math.random() * 0.7 + 0.4;
+        this.opacity = Math.random() * 0.5 + 0.2;
       }
 
       update() {
@@ -80,36 +70,9 @@ const FloatingParticles = () => {
           this.speedX = this.baseSpeedX + Math.cos(angle) * force * 3;
           this.speedY = this.baseSpeedY + Math.sin(angle) * force * 3;
         } else {
-          // Check for click attraction
-          if (clickRef.current) {
-            const clickAge = Date.now() - clickRef.current.timestamp;
-            const attractionDuration = 1500; // 1.5 seconds
-
-            if (clickAge < attractionDuration) {
-              const cdx = clickRef.current.x - this.x;
-              const cdy = clickRef.current.y - this.y;
-              const clickDistance = Math.sqrt(cdx * cdx + cdy * cdy);
-              
-              // Attraction strength decreases over time
-              const attractionStrength = (1 - clickAge / attractionDuration) * 0.8;
-              
-              if (clickDistance > 10) {
-                const angle = Math.atan2(cdy, cdx);
-                this.speedX = this.baseSpeedX + Math.cos(angle) * attractionStrength * 5;
-                this.speedY = this.baseSpeedY + Math.sin(angle) * attractionStrength * 5;
-              }
-            } else {
-              // Clear old click after duration
-              clickRef.current = null;
-              // Gradually return to base speed
-              this.speedX += (this.baseSpeedX - this.speedX) * 0.05;
-              this.speedY += (this.baseSpeedY - this.speedY) * 0.05;
-            }
-          } else {
-            // Gradually return to base speed
-            this.speedX += (this.baseSpeedX - this.speedX) * 0.05;
-            this.speedY += (this.baseSpeedY - this.speedY) * 0.05;
-          }
+          // Gradually return to base speed
+          this.speedX += (this.baseSpeedX - this.speedX) * 0.05;
+          this.speedY += (this.baseSpeedY - this.speedY) * 0.05;
         }
 
         this.x += this.speedX;
@@ -156,8 +119,8 @@ const FloatingParticles = () => {
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance < 150) {
-            ctx.strokeStyle = `rgba(76, 201, 240, ${0.3 * (1 - distance / 150)})`;
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = `rgba(76, 201, 240, ${0.15 * (1 - distance / 150)})`;
+            ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(particleA.x, particleA.y);
             ctx.lineTo(particleB.x, particleB.y);
@@ -175,7 +138,6 @@ const FloatingParticles = () => {
       window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseleave", handleMouseLeave);
-      window.removeEventListener("click", handleClick);
     };
   }, []);
 
@@ -184,10 +146,10 @@ const FloatingParticles = () => {
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none"
-        style={{ opacity: 0.85 }}
+        style={{ opacity: 0.6 }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/10 to-transparent animate-pulse-slow pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-radial from-primary/20 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent animate-pulse-slow pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-radial from-primary/10 via-transparent to-transparent pointer-events-none" />
     </>
   );
 };
