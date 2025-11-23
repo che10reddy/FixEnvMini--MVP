@@ -39,7 +39,7 @@ const Hero = () => {
         </div>
 
         <div className="max-w-4xl mx-auto space-y-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <div className="border border-border/50 rounded-xl p-6 backdrop-blur-sm shadow-[0_0_20px_rgba(76,201,240,0.15)]">
+          <div className="border border-border/50 rounded-xl p-6 backdrop-blur-sm shadow-[0_0_40px_rgba(76,201,240,0.5)]">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Github className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
