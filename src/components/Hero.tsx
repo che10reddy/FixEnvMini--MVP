@@ -67,7 +67,7 @@ const Hero = () => {
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
             <span className="text-foreground">Fix Your</span>
             <br />
-            <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent glow-text animate-gradient">
+            <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient animate-pulse-glow">
               Environment Issues
             </span>
           </h1>
