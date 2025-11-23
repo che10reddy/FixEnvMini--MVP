@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Scanning from "./pages/Scanning";
 import Results from "./pages/Results";
 import Snapshot from "./pages/Snapshot";
+import ReproducibilityScore from "./pages/ReproducibilityScore";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/scanning" element={<Scanning />} />
           <Route path="/results" element={<Results />} />
           <Route path="/snapshot" element={<Snapshot />} />
+          <Route path="/reproducibility" element={<ReproducibilityScore />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
