@@ -29,11 +29,11 @@ const Features = () => {
             return (
               <Card 
                 key={index}
-                className="bg-card border-border hover:border-primary/50 transition-all duration-300 group hover:glow-border"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="bg-card border-border hover:border-primary/50 transition-all duration-300 group hover:shadow-lg hover:shadow-primary/10 animate-fade-in hover:-translate-y-1"
+                style={{ animationDelay: `${300 + index * 100}ms` }}
               >
                 <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-all group-hover:scale-110">
                     <Icon className="w-6 h-6 text-primary" />
                   </div>
                   <CardTitle className="font-display text-xl">{feature.title}</CardTitle>
