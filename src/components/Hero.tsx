@@ -24,6 +24,7 @@ const Hero = () => {
       
       if (heroRef.current) {
         heroRef.current.style.transform = `translateY(${scrollY * 0.5}px)`;
+        heroRef.current.style.opacity = `${opacity}`;
       }
       if (subtitleRef.current) {
         subtitleRef.current.style.transform = `translateY(${scrollY * 0.3}px)`;
@@ -31,6 +32,7 @@ const Hero = () => {
       }
       if (inputSectionRef.current) {
         inputSectionRef.current.style.transform = `translateY(${scrollY * 0.15}px)`;
+        inputSectionRef.current.style.opacity = `${opacity}`;
       }
       
       ticking = false;
