@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const steps = [
   "Fetching repository",
@@ -32,9 +33,9 @@ const Scanning = () => {
   }, [navigate]);
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background flex flex-col">
       <Header />
-      <section className="flex items-center justify-center px-4 py-12 pt-24 min-h-screen">
+      <section className="flex items-center justify-center px-4 py-12 pt-24 min-h-screen flex-1">
         <div className="max-w-3xl w-full text-center space-y-8 animate-fade-in">
           {/* Hero Title */}
           <div className="space-y-4">
@@ -107,6 +108,7 @@ const Scanning = () => {
           </p>
         </div>
       </section>
+      <Footer />
     </main>
   );
 };
