@@ -24,6 +24,9 @@ const Hero = () => {
       }
       if (subtitleRef.current) {
         subtitleRef.current.style.transform = `translateY(${scrollY * 0.3}px)`;
+        // Fade out subtitle when scrolling down
+        const opacity = Math.max(0, 1 - scrollY / 300);
+        subtitleRef.current.style.opacity = opacity.toString();
       }
       if (inputSectionRef.current) {
         inputSectionRef.current.style.transform = `translateY(${scrollY * 0.15}px)`;
