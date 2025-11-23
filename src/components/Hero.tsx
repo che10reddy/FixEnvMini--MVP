@@ -109,7 +109,7 @@ const Hero = () => {
             </div>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            No installation required • Instant analysis • Python-only (MVP)
+            No installation required • Instant analysis • Python-only
           </p>
         </div>
       </div>
