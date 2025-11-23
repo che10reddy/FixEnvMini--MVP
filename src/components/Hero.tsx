@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Github } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import FloatingParticles from "./FloatingParticles";
 
 const Hero = () => {
   const [repoUrl, setRepoUrl] = useState("");
@@ -34,7 +35,8 @@ const Hero = () => {
 
   return (
     <section className="flex items-center justify-center px-4 py-12 pt-24 relative overflow-hidden">
-      <div className="max-w-5xl w-full text-center space-y-8 animate-fade-in">
+      <FloatingParticles />
+      <div className="max-w-5xl w-full text-center space-y-8 animate-fade-in relative z-10">
         <div 
           className="space-y-6"
           style={{
