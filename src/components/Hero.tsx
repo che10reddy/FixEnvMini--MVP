@@ -2,13 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Github, ChevronDown } from "lucide-react";
+import { Search, Github } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import FloatingParticles from "./FloatingParticles";
 
 const Hero = () => {
   const [repoUrl, setRepoUrl] = useState("");
-  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
@@ -19,9 +18,6 @@ const Hero = () => {
 
     const updateParallax = () => {
       const scrollY = window.scrollY;
-      
-      // Hide scroll indicator when user scrolls down
-      setShowScrollIndicator(scrollY < 50);
       
       if (heroRef.current) {
         heroRef.current.style.transform = `translateY(${scrollY * 0.5}px)`;
@@ -58,11 +54,6 @@ const Hero = () => {
     }
     
     navigate("/scanning");
-  };
-
-  const scrollToFeatures = () => {
-    const featuresSection = document.querySelector('section:nth-of-type(2)');
-    featuresSection?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -121,20 +112,6 @@ const Hero = () => {
             No installation required • Instant analysis • Python-only (MVP)
           </p>
         </div>
-
-        {/* Scroll Indicator */}
-        <button
-          onClick={scrollToFeatures}
-          className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-muted-foreground hover:text-primary transition-all duration-300 cursor-pointer group z-10 ${
-            showScrollIndicator ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-          aria-label="Scroll to features"
-        >
-          <span className="text-sm font-medium">Explore Features</span>
-          <div className="animate-bounce">
-            <ChevronDown className="w-6 h-6 group-hover:text-primary transition-colors" />
-          </div>
-        </button>
       </div>
     </section>
   );
