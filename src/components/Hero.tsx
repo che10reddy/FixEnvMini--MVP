@@ -18,12 +18,16 @@ const Hero = () => {
 
     const updateParallax = () => {
       const scrollY = window.scrollY;
+      const fadeStart = 0;
+      const fadeEnd = 300;
+      const opacity = Math.max(0, Math.min(1, 1 - (scrollY - fadeStart) / (fadeEnd - fadeStart)));
       
       if (heroRef.current) {
         heroRef.current.style.transform = `translateY(${scrollY * 0.5}px)`;
       }
       if (subtitleRef.current) {
         subtitleRef.current.style.transform = `translateY(${scrollY * 0.3}px)`;
+        subtitleRef.current.style.opacity = `${opacity}`;
       }
       if (inputSectionRef.current) {
         inputSectionRef.current.style.transform = `translateY(${scrollY * 0.15}px)`;
