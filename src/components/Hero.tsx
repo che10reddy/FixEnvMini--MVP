@@ -47,14 +47,14 @@ const Hero = () => {
                 placeholder="https://github.com/username/repo"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                className="h-14 pl-12 bg-background border-2 border-border/50 text-foreground placeholder:text-muted-foreground code-font text-base focus-visible:border-primary/50 focus-visible:ring-0 focus-visible:shadow-[0_0_20px_rgba(76,201,240,0.3)]"
+                className="h-14 pl-12 bg-codeBg border-border text-foreground placeholder:text-muted-foreground code-font text-base"
                 onKeyDown={(e) => e.key === "Enter" && handleScan()}
               />
             </div>
             <Button 
               onClick={handleScan}
               size="lg"
-              className="h-14 px-8 bg-primary hover:bg-primary/90 text-black font-semibold gap-2 transition-all shadow-[0_0_20px_rgba(76,201,240,0.4)] hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] border-0 text-base"
+              className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
             >
               <Search className="w-5 h-5" />
               Scan Repository
