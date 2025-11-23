@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Github } from "lucide-react";
@@ -6,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 
 const Hero = () => {
   const [repoUrl, setRepoUrl] = useState("");
+  const navigate = useNavigate();
 
   const handleScan = () => {
     if (!repoUrl.trim()) {
@@ -17,10 +19,7 @@ const Hero = () => {
       return;
     }
     
-    toast({
-      title: "Scanning Repository",
-      description: "Analyzing your Python environment...",
-    });
+    navigate("/scanning");
   };
 
   return (
