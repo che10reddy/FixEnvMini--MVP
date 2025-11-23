@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 
@@ -12,19 +13,23 @@ const steps = [
 
 const Scanning = () => {
   const [currentStep, setCurrentStep] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentStep((prev) => {
         if (prev < steps.length - 1) {
           return prev + 1;
+        } else {
+          // Navigate to results when complete
+          setTimeout(() => navigate("/results"), 1000);
         }
         return prev;
       });
     }, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
   return (
     <main className="min-h-screen bg-background">
