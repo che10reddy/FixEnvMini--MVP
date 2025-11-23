@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,17 @@ import { toast } from "@/hooks/use-toast";
 
 const Hero = () => {
   const [repoUrl, setRepoUrl] = useState("");
+  const [scrollY, setScrollY] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleScan = () => {
     if (!repoUrl.trim()) {
@@ -23,9 +33,15 @@ const Hero = () => {
   };
 
   return (
-    <section className="flex items-center justify-center px-4 py-12 pt-24">
+    <section className="flex items-center justify-center px-4 py-12 pt-24 relative overflow-hidden">
       <div className="max-w-5xl w-full text-center space-y-8 animate-fade-in">
-        <div className="space-y-6">
+        <div 
+          className="space-y-6"
+          style={{
+            transform: `translateY(${scrollY * 0.5}px)`,
+            transition: 'transform 0.1s ease-out'
+          }}
+        >
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
             <span className="text-foreground">Fix Your</span>
             <br />
@@ -33,12 +49,26 @@ const Hero = () => {
               Environment Issues
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <p 
+            className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in" 
+            style={{ 
+              animationDelay: '100ms',
+              transform: `translateY(${scrollY * 0.3}px)`,
+              transition: 'transform 0.1s ease-out'
+            }}
+          >
             Scan your GitHub repository for dependency conflicts, missing pins, and reproducibility issues.
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto space-y-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <div 
+          className="max-w-4xl mx-auto space-y-4 animate-fade-in" 
+          style={{ 
+            animationDelay: '200ms',
+            transform: `translateY(${scrollY * 0.15}px)`,
+            transition: 'transform 0.1s ease-out'
+          }}
+        >
           <div className="border border-border/50 rounded-xl p-6 backdrop-blur-sm shadow-[0_0_40px_rgba(76,201,240,0.5)]">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
