@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 const FloatingParticles = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
+  const clickRef = useRef<{ x: number; y: number; timestamp: number } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -31,8 +32,17 @@ const FloatingParticles = () => {
       mouseRef.current = { x: -1000, y: -1000 };
     };
 
+    const handleClick = (e: MouseEvent) => {
+      clickRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        timestamp: Date.now(),
+      };
+    };
+
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener("click", handleClick);
 
     // Particle class
     class Particle {
@@ -70,9 +80,36 @@ const FloatingParticles = () => {
           this.speedX = this.baseSpeedX + Math.cos(angle) * force * 3;
           this.speedY = this.baseSpeedY + Math.sin(angle) * force * 3;
         } else {
-          // Gradually return to base speed
-          this.speedX += (this.baseSpeedX - this.speedX) * 0.05;
-          this.speedY += (this.baseSpeedY - this.speedY) * 0.05;
+          // Check for click attraction
+          if (clickRef.current) {
+            const clickAge = Date.now() - clickRef.current.timestamp;
+            const attractionDuration = 1500; // 1.5 seconds
+
+            if (clickAge < attractionDuration) {
+              const cdx = clickRef.current.x - this.x;
+              const cdy = clickRef.current.y - this.y;
+              const clickDistance = Math.sqrt(cdx * cdx + cdy * cdy);
+              
+              // Attraction strength decreases over time
+              const attractionStrength = (1 - clickAge / attractionDuration) * 0.8;
+              
+              if (clickDistance > 10) {
+                const angle = Math.atan2(cdy, cdx);
+                this.speedX = this.baseSpeedX + Math.cos(angle) * attractionStrength * 5;
+                this.speedY = this.baseSpeedY + Math.sin(angle) * attractionStrength * 5;
+              }
+            } else {
+              // Clear old click after duration
+              clickRef.current = null;
+              // Gradually return to base speed
+              this.speedX += (this.baseSpeedX - this.speedX) * 0.05;
+              this.speedY += (this.baseSpeedY - this.speedY) * 0.05;
+            }
+          } else {
+            // Gradually return to base speed
+            this.speedX += (this.baseSpeedX - this.speedX) * 0.05;
+            this.speedY += (this.baseSpeedY - this.speedY) * 0.05;
+          }
         }
 
         this.x += this.speedX;
@@ -138,6 +175,7 @@ const FloatingParticles = () => {
       window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseleave", handleMouseLeave);
+      window.removeEventListener("click", handleClick);
     };
   }, []);
 
