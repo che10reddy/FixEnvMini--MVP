@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Sparkles, FileText } from "lucide-react";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 
 const features = [
   {
@@ -20,8 +21,15 @@ const features = [
 ];
 
 const Features = () => {
+  const { ref, isVisible } = useScrollAnimation();
+
   return (
-    <section className="px-4 py-20">
+    <section 
+      ref={ref}
+      className={`px-4 py-20 transition-all duration-1000 ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+      }`}
+    >
       <div className="max-w-6xl mx-auto">
         <div className="grid md:grid-cols-3 gap-6">
           {features.map((feature, index) => {
@@ -29,8 +37,12 @@ const Features = () => {
             return (
               <Card 
                 key={index}
-                className="bg-card border-border hover:border-primary/50 transition-all duration-300 group hover:shadow-lg hover:shadow-primary/10 animate-fade-in hover:-translate-y-1"
-                style={{ animationDelay: `${300 + index * 100}ms` }}
+                className={`bg-card border-border hover:border-primary/50 transition-all duration-500 group hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 ${
+                  isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+                }`}
+                style={{ 
+                  transitionDelay: isVisible ? `${index * 150}ms` : "0ms"
+                }}
               >
                 <CardHeader>
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-all group-hover:scale-110">
