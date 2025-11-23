@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Footer from "@/components/Footer";
 
 const ReproducibilityScore = () => {
   const navigate = useNavigate();
@@ -40,8 +41,8 @@ const ReproducibilityScore = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="container mx-auto px-4 py-12 flex-1">
         <div className="max-w-4xl mx-auto space-y-12">
           {/* Hero Section */}
           <div className="text-center space-y-4 animate-fade-in">
@@ -154,6 +155,7 @@ const ReproducibilityScore = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

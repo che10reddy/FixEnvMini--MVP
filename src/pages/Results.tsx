@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 // Mock data for demonstration
 const issues = [
@@ -77,9 +78,9 @@ const Results = () => {
   };
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background flex flex-col">
       <Header />
-      <section className="px-4 py-12 pt-24 pb-20">
+      <section className="px-4 py-12 pt-24 pb-20 flex-1">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Hero Section */}
           <div className="text-center space-y-4 animate-fade-in">
@@ -198,6 +199,7 @@ const Results = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </main>
   );
 };

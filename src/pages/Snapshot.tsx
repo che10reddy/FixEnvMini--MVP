@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Download, FileCode, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import Footer from "@/components/Footer";
 
 const Snapshot = () => {
   const navigate = useNavigate();
@@ -36,8 +37,8 @@ const Snapshot = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="container mx-auto px-4 py-12 flex-1">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Hero Section */}
           <div className="text-center space-y-4 animate-fade-in">
@@ -109,6 +110,7 @@ const Snapshot = () => {
           </p>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
