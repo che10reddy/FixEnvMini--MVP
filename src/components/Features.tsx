@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Search, Sparkles, FileText } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 
@@ -49,7 +49,7 @@ const Features = () => {
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-all group-hover:scale-110">
                     <Icon className="w-6 h-6 text-primary" />
                   </div>
-                  <CardTitle className="font-display text-xl">{feature.title}</CardTitle>
+                  <h2 className="font-semibold tracking-tight font-display text-xl">{feature.title}</h2>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-muted-foreground">
