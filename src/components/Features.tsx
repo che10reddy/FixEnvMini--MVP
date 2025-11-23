@@ -37,11 +37,12 @@ const Features = () => {
             return (
               <Card 
                 key={index}
-                className={`bg-card border-border hover:border-primary/50 transition-all duration-500 group hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 ${
+                className={`bg-card border-border hover:border-primary/50 transition-all duration-500 group hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 animate-float ${
                   isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
                 }`}
                 style={{ 
-                  transitionDelay: isVisible ? `${index * 150}ms` : "0ms"
+                  transitionDelay: isVisible ? `${index * 150}ms` : "0ms",
+                  animationDelay: `${index * 0.5}s`
                 }}
               >
                 <CardHeader>
