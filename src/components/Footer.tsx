@@ -46,7 +46,7 @@ const Footer = () => {
 
           {/* Copyright */}
           <div className="text-sm text-muted-foreground text-center md:text-right">
-            © 2024 FixEnv Mini
+            © 2025 FixEnv Mini
           </div>
         </div>
       </div>
