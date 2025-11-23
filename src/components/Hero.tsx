@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,35 @@ import FloatingParticles from "./FloatingParticles";
 
 const Hero = () => {
   const [repoUrl, setRepoUrl] = useState("");
-  const [scrollY, setScrollY] = useState(0);
   const navigate = useNavigate();
+  const heroRef = useRef<HTMLDivElement>(null);
+  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const inputSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let ticking = false;
+
+    const updateParallax = () => {
+      const scrollY = window.scrollY;
+      
+      if (heroRef.current) {
+        heroRef.current.style.transform = `translateY(${scrollY * 0.5}px)`;
+      }
+      if (subtitleRef.current) {
+        subtitleRef.current.style.transform = `translateY(${scrollY * 0.3}px)`;
+      }
+      if (inputSectionRef.current) {
+        inputSectionRef.current.style.transform = `translateY(${scrollY * 0.15}px)`;
+      }
+      
+      ticking = false;
+    };
+
     const handleScroll = () => {
-      setScrollY(window.scrollY);
+      if (!ticking) {
+        requestAnimationFrame(updateParallax);
+        ticking = true;
+      }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -38,11 +61,8 @@ const Hero = () => {
       <FloatingParticles />
       <div className="max-w-5xl w-full text-center space-y-8 animate-fade-in relative z-10">
         <div 
-          className="space-y-6"
-          style={{
-            transform: `translateY(${scrollY * 0.5}px)`,
-            transition: 'transform 0.1s ease-out'
-          }}
+          ref={heroRef}
+          className="space-y-6 will-change-transform"
         >
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
             <span className="text-foreground">Fix Your</span>
@@ -52,24 +72,18 @@ const Hero = () => {
             </span>
           </h1>
           <p 
-            className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in" 
-            style={{ 
-              animationDelay: '100ms',
-              transform: `translateY(${scrollY * 0.3}px)`,
-              transition: 'transform 0.1s ease-out'
-            }}
+            ref={subtitleRef}
+            className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in will-change-transform" 
+            style={{ animationDelay: '100ms' }}
           >
             Scan your GitHub repository for dependency conflicts, missing pins, and reproducibility issues.
           </p>
         </div>
 
         <div 
-          className="max-w-4xl mx-auto space-y-4 animate-fade-in" 
-          style={{ 
-            animationDelay: '200ms',
-            transform: `translateY(${scrollY * 0.15}px)`,
-            transition: 'transform 0.1s ease-out'
-          }}
+          ref={inputSectionRef}
+          className="max-w-4xl mx-auto space-y-4 animate-fade-in will-change-transform" 
+          style={{ animationDelay: '200ms' }}
         >
           <div className="border border-border/50 rounded-xl p-6 backdrop-blur-sm shadow-[0_0_40px_rgba(76,201,240,0.5)]">
             <div className="flex flex-col sm:flex-row gap-3">
