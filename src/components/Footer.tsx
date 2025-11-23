@@ -27,9 +27,7 @@ const Footer = () => {
               <span className="text-sm font-medium">GitHub</span>
             </a>
             <a
-              href="https://docs.lovable.dev"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
               className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
             >
               <Book className="w-5 h-5" />
