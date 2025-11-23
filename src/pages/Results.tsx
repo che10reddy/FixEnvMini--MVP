@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ResultsSkeleton from "@/components/ResultsSkeleton";
 
 // Mock data for demonstration
 const issues = [
@@ -50,6 +52,16 @@ const dependencyDiff = [
 
 const Results = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate data loading
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
@@ -81,7 +93,10 @@ const Results = () => {
     <main className="min-h-screen bg-background flex flex-col">
       <Header />
       <section className="px-4 py-12 pt-24 pb-20 flex-1">
-        <div className="max-w-6xl mx-auto space-y-8">
+        {isLoading ? (
+          <ResultsSkeleton />
+        ) : (
+          <div className="max-w-6xl mx-auto space-y-8">
           {/* Hero Section */}
           <div className="text-center space-y-4 animate-fade-in">
             <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight">
@@ -198,6 +213,7 @@ const Results = () => {
             </Button>
           </div>
         </div>
+        )}
       </section>
       <Footer />
     </main>
