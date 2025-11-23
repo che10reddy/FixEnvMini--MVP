@@ -24,8 +24,8 @@ const Hero = () => {
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center px-4 py-20 pt-32">
-      <div className="max-w-5xl w-full text-center space-y-12 animate-fade-in">
+    <section className="flex items-center justify-center px-4 py-12 pt-24">
+      <div className="max-w-5xl w-full text-center space-y-8 animate-fade-in">
         <div className="space-y-6">
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
             <span className="text-foreground">Fix Your</span>
