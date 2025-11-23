@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Download, FileCode } from "lucide-react";
+import { Download, FileCode, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Snapshot = () => {
+  const navigate = useNavigate();
   const snapshotData = {
     python_version: "3.10",
     dependencies: {
@@ -81,14 +83,23 @@ const Snapshot = () => {
           </div>
 
           {/* Download Button */}
-          <div className="flex justify-center animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: '200ms' }}>
             <Button 
               onClick={handleDownload}
               size="lg"
-              className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
+              variant="outline"
+              className="h-14 px-8 font-semibold gap-2 transition-all text-base"
             >
               <Download className="w-5 h-5" />
               Download Snapshot (.zfix)
+            </Button>
+            <Button 
+              onClick={() => navigate("/reproducibility")}
+              size="lg"
+              className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
+            >
+              View Reproducibility Score
+              <ArrowRight className="w-5 h-5" />
             </Button>
           </div>
 
