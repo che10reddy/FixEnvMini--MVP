@@ -63,7 +63,7 @@ const FloatingParticles = () => {
         this.speedY = Math.random() * 0.5 - 0.25;
         this.baseSpeedX = this.speedX;
         this.baseSpeedY = this.speedY;
-        this.opacity = Math.random() * 0.5 + 0.2;
+        this.opacity = Math.random() * 0.7 + 0.4;
       }
 
       update() {
@@ -156,8 +156,8 @@ const FloatingParticles = () => {
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance < 150) {
-            ctx.strokeStyle = `rgba(76, 201, 240, ${0.15 * (1 - distance / 150)})`;
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(76, 201, 240, ${0.3 * (1 - distance / 150)})`;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(particleA.x, particleA.y);
             ctx.lineTo(particleB.x, particleB.y);
@@ -184,10 +184,10 @@ const FloatingParticles = () => {
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none"
-        style={{ opacity: 0.6 }}
+        style={{ opacity: 0.85 }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent animate-pulse-slow pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-radial from-primary/10 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/10 to-transparent animate-pulse-slow pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-radial from-primary/20 via-transparent to-transparent pointer-events-none" />
     </>
   );
 };
