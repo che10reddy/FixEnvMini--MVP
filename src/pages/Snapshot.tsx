@@ -1,11 +1,24 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, FileCode, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import Footer from "@/components/Footer";
+import SnapshotSkeleton from "@/components/SnapshotSkeleton";
 
 const Snapshot = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate snapshot generation
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const snapshotData = {
     python_version: "3.10",
     dependencies: {
@@ -39,7 +52,10 @@ const Snapshot = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="container mx-auto px-4 py-12 flex-1">
-        <div className="max-w-4xl mx-auto space-y-8">
+        {isLoading ? (
+          <SnapshotSkeleton />
+        ) : (
+          <div className="max-w-4xl mx-auto space-y-8">
           {/* Hero Section */}
           <div className="text-center space-y-4 animate-fade-in">
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
@@ -108,7 +124,8 @@ const Snapshot = () => {
           <p className="text-sm text-muted-foreground text-center animate-fade-in" style={{ animationDelay: '300ms' }}>
             This snapshot can be used to reproduce the same environment consistently across systems.
           </p>
-        </div>
+          </div>
+        )}
       </div>
       <Footer />
     </div>
