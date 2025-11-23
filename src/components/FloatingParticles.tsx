@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 const FloatingParticles = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: -1000, y: -1000 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -18,6 +19,21 @@ const FloatingParticles = () => {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
+    // Track mouse position
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+      };
+    };
+
+    const handleMouseLeave = () => {
+      mouseRef.current = { x: -1000, y: -1000 };
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseleave", handleMouseLeave);
+
     // Particle class
     class Particle {
       x: number;
@@ -25,6 +41,8 @@ const FloatingParticles = () => {
       size: number;
       speedX: number;
       speedY: number;
+      baseSpeedX: number;
+      baseSpeedY: number;
       opacity: number;
 
       constructor() {
@@ -33,10 +51,30 @@ const FloatingParticles = () => {
         this.size = Math.random() * 3 + 1;
         this.speedX = Math.random() * 0.5 - 0.25;
         this.speedY = Math.random() * 0.5 - 0.25;
+        this.baseSpeedX = this.speedX;
+        this.baseSpeedY = this.speedY;
         this.opacity = Math.random() * 0.5 + 0.2;
       }
 
       update() {
+        // Calculate distance from mouse
+        const dx = this.x - mouseRef.current.x;
+        const dy = this.y - mouseRef.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const repelRadius = 150;
+
+        // Apply repulsion force if mouse is nearby
+        if (distance < repelRadius && distance > 0) {
+          const force = (repelRadius - distance) / repelRadius;
+          const angle = Math.atan2(dy, dx);
+          this.speedX = this.baseSpeedX + Math.cos(angle) * force * 3;
+          this.speedY = this.baseSpeedY + Math.sin(angle) * force * 3;
+        } else {
+          // Gradually return to base speed
+          this.speedX += (this.baseSpeedX - this.speedX) * 0.05;
+          this.speedY += (this.baseSpeedY - this.speedY) * 0.05;
+        }
+
         this.x += this.speedX;
         this.y += this.speedY;
 
@@ -98,6 +136,8 @@ const FloatingParticles = () => {
 
     return () => {
       window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseleave", handleMouseLeave);
     };
   }, []);
 
