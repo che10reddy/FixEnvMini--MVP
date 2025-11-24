@@ -392,6 +392,13 @@ const Results = () => {
                     <p className="text-sm font-medium text-foreground">Reproducible environment</p>
                   </div>
                 </div>
+                <Button
+                  onClick={() => navigate("/")}
+                  size="lg"
+                  className="mt-6 h-14 px-8 font-semibold gap-2 text-base"
+                >
+                  Return Home
+                </Button>
               </div>
             </div>
           )}
