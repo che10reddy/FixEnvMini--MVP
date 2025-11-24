@@ -68,6 +68,8 @@ const Scanning = () => {
               rawRequirements: data.rawRequirements,
               detectedFormats: data.detectedFormats || [],
               foundFiles: data.foundFiles || [],
+              pythonVersion: data.pythonVersion,
+              pythonVersionSource: data.pythonVersionSource,
             } 
           });
         }, 500);

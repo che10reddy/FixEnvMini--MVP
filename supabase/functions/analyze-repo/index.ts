@@ -72,6 +72,59 @@ serve(async (req) => {
     const detectedFormats = [...new Set(foundFiles.map(f => f.format))];
     const primaryFormat = foundFiles[0].format;
 
+    // Detect Python version from multiple sources
+    console.log('Detecting Python version...');
+    const pythonVersionSources = [
+      { name: 'runtime.txt', pattern: /python-(\d+\.\d+\.?\d*)/i },
+      { name: '.python-version', pattern: /(\d+\.\d+\.?\d*)/ },
+      { name: '.github/workflows/ci.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
+      { name: '.github/workflows/main.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
+      { name: '.github/workflows/test.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
+    ];
+
+    let detectedPythonVersion = '';
+    let pythonVersionSource = '';
+
+    // Check pyproject.toml first (already fetched)
+    const pyprojectFile = foundFiles.find(f => f.name === 'pyproject.toml');
+    if (pyprojectFile && !detectedPythonVersion) {
+      const pythonMatch = pyprojectFile.content.match(/python\s*=\s*["']([^"']+)["']/);
+      if (pythonMatch) {
+        detectedPythonVersion = pythonMatch[1];
+        pythonVersionSource = 'pyproject.toml';
+        console.log(`✓ Found Python version in pyproject.toml: ${detectedPythonVersion}`);
+      }
+    }
+
+    // Check other Python version files
+    for (const source of pythonVersionSources) {
+      if (detectedPythonVersion) break;
+      
+      try {
+        const response = await fetch(
+          `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${source.name}`
+        );
+        if (response.ok) {
+          const content = await response.text();
+          const match = content.match(source.pattern);
+          if (match) {
+            detectedPythonVersion = match[1];
+            pythonVersionSource = source.name;
+            console.log(`✓ Found Python version in ${source.name}: ${detectedPythonVersion}`);
+            break;
+          }
+        }
+      } catch (error) {
+        // File doesn't exist, continue
+      }
+    }
+
+    if (!detectedPythonVersion) {
+      console.log('⚠ No Python version file found, will use general compatibility checks');
+      detectedPythonVersion = 'unknown';
+      pythonVersionSource = 'not detected';
+    }
+
     // Analyze with AI
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -84,19 +137,27 @@ serve(async (req) => {
       filesContent += `\n--- ${file.name} (${file.format}) ---\n${file.content}\n`;
     });
 
+    const pythonVersionInfo = detectedPythonVersion !== 'unknown' 
+      ? `\n\nDETECTED PYTHON VERSION: ${detectedPythonVersion} (from ${pythonVersionSource})\nIMPORTANT: Check all packages for compatibility with Python ${detectedPythonVersion}`
+      : '\n\nNOTE: No Python version detected. Provide general compatibility warnings for common Python version issues.';
+
     const aiPrompt = `You are an expert Python dependency analyst. Analyze the following Python dependency file(s) using your knowledge of common dependency issues.
 
 DETECTED FILES:
 ${foundFiles.map(f => `- ${f.name} (${f.format})`).join('\n')}
+${pythonVersionInfo}
 
 KNOWN PATTERNS TO DETECT:
 
 1. Missing Version Pins: Unpinned packages (e.g., numpy with no version) cause version drift
-2. Python Compatibility:
+2. Python Compatibility (CRITICAL - Check against detected Python version):
    - pandas <1.5 incompatible with Python 3.11+
    - TensorFlow 2.3 only supports Python 3.6-3.8
    - Django 2.2 incompatible with Python 3.10+
    - matplotlib 3.1.0 requires Python <3.11
+   - NumPy <1.22 incompatible with Python 3.11+
+   - asyncio compatibility issues with Python <3.7
+   - typing module changes between Python 3.5-3.10
 3. CUDA Mismatches: torch 2.1.0 requires CUDA 12.1 (not 11.7), torch 1.13.1+cu117 for CUDA 11.7
 4. Breaking Upgrades:
    - SQLAlchemy 2.0 breaks Flask-SQLAlchemy <3
@@ -265,6 +326,8 @@ CATEGORY RULES:
       data: analysisResult,
       detectedFormats: detectedFormats,
       primaryFormat: primaryFormat,
+      pythonVersion: detectedPythonVersion,
+      pythonVersionSource: pythonVersionSource,
       foundFiles: foundFiles.map(f => ({ name: f.name, format: f.format })),
       rawRequirements: foundFiles[0].content, // Keep for backward compatibility
     }), {
