@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Home } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Footer from "@/components/Footer";
 
 const ReproducibilityScore = () => {
   const navigate = useNavigate();
-  const score = 94;
+  const location = useLocation();
+  const score = location.state?.reproducibilityScore || 94;
   
   // Color logic based on score
   const getScoreColor = (score: number) => {
