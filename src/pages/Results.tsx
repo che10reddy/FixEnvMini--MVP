@@ -188,6 +188,16 @@ const Results = () => {
     });
   };
 
+  const handleViewScore = () => {
+    navigate("/reproducibility", {
+      state: {
+        reproducibilityScore: analysisData.reproducibilityScore,
+        issues: issues,
+        dependencyDiff: dependencyDiff,
+      }
+    });
+  };
+
   const exportAsMarkdown = () => {
     const score = analysisData.reproducibilityScore || 0;
     const scoreColor = score >= 80 ? 'brightgreen' : score >= 50 ? 'yellow' : 'red';
@@ -392,13 +402,24 @@ const Results = () => {
                     <p className="text-sm font-medium text-foreground">Reproducible environment</p>
                   </div>
                 </div>
-                <Button
-                  onClick={() => navigate("/")}
-                  size="lg"
-                  className="mt-6 h-14 px-8 font-semibold gap-2 text-base"
-                >
-                  Return Home
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                  <Button
+                    onClick={handleViewScore}
+                    size="lg"
+                    className="h-14 px-8 font-semibold gap-2 text-base"
+                  >
+                    View Reproducibility Score
+                    <ArrowRight className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/")}
+                    size="lg"
+                    variant="outline"
+                    className="h-14 px-8 font-semibold gap-2 text-base"
+                  >
+                    Return Home
+                  </Button>
+                </div>
               </div>
             </div>
           )}
