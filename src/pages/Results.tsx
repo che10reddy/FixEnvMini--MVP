@@ -25,6 +25,8 @@ const Results = () => {
   const rawRequirements = location.state?.rawRequirements;
   const detectedFormats = location.state?.detectedFormats || [];
   const foundFiles = location.state?.foundFiles || [];
+  const pythonVersion = location.state?.pythonVersion;
+  const pythonVersionSource = location.state?.pythonVersionSource;
 
   // Redirect if no data
   useEffect(() => {
@@ -106,9 +108,33 @@ const Results = () => {
                     {file.format}
                   </span>
                 ))}
+                {pythonVersion && pythonVersion !== 'unknown' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                    Python {pythonVersion}
+                  </span>
+                )}
               </div>
             )}
           </div>
+
+          {/* Python Version Info Card - Only show if detected */}
+          {pythonVersion && pythonVersion !== 'unknown' && (
+            <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 animate-fade-in" style={{ animationDelay: '50ms' }}>
+              <div className="flex items-center gap-3">
+                <Info className="w-5 h-5 text-accent flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-foreground">
+                    <span className="font-semibold">Python {pythonVersion}</span> detected from{' '}
+                    <code className="code-font text-xs bg-codeBg px-2 py-0.5 rounded text-accent">{pythonVersionSource}</code>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    All dependency compatibility checks are performed against this Python version.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Issues Summary Card */}
           <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '100ms' }}>
