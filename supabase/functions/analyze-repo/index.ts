@@ -67,7 +67,9 @@ Requirements.txt content:
 ${requirementsContent}
 \`\`\`
 
-Respond with a JSON object with this exact structure:
+CRITICAL: Respond ONLY with a valid JSON object. Do not include markdown code blocks, explanatory text, or any formatting. Return raw JSON only.
+
+Use this exact structure:
 {
   "issues": [
     {
@@ -119,7 +121,16 @@ Respond with a JSON object with this exact structure:
     const aiData = await aiResponse.json();
     console.log('AI response received');
     
-    const analysisResult = JSON.parse(aiData.choices[0].message.content);
+    // Strip markdown code blocks if present
+    let content = aiData.choices[0].message.content;
+    console.log('Raw AI content:', content.substring(0, 100));
+    
+    // Remove markdown code blocks (```json ... ``` or ``` ... ```)
+    content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    
+    console.log('Cleaned content:', content.substring(0, 100));
+    
+    const analysisResult = JSON.parse(content);
 
     return new Response(JSON.stringify({
       success: true,
