@@ -6,9 +6,6 @@ verify_jwt = false
 [functions.generate-snapshot]
 verify_jwt = false
 
-[functions.auto-fix-requirements]
-verify_jwt = false
-
 [functions.create-share]
 verify_jwt = false
 

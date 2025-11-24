@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Wand2, Download, Loader2, Share2, BookOpen, Copy, Check } from "lucide-react";
+import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Package, Download, Loader2, Share2, BookOpen, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +20,7 @@ const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
-  const [isGeneratingFix, setIsGeneratingFix] = useState(false);
+  const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -90,10 +90,10 @@ const Results = () => {
     }
   };
 
-  const handleAutoFix = async () => {
-    setIsGeneratingFix(true);
+  const handleGenerateSnapshot = async () => {
+    setIsGeneratingSnapshot(true);
     try {
-      const { data, error } = await supabase.functions.invoke('auto-fix-requirements', {
+      const { data, error } = await supabase.functions.invoke('generate-snapshot', {
         body: {
           issues,
           suggestions,
@@ -102,18 +102,21 @@ const Results = () => {
           primaryFormat: location.state?.primaryFormat,
           pythonVersion,
           rawRequirements,
+          repositoryUrl,
+          reproducibilityScore: analysisData.reproducibilityScore,
         }
       });
 
       if (error) throw error;
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to generate fix');
+        throw new Error(data.error || 'Failed to generate snapshot');
       }
 
-      // Navigate to preview page instead of downloading
+      // Navigate to preview page with .zfix data
       navigate("/fix-preview", {
         state: {
+          zfixData: data.zfixData,
           fixedContent: data.fixedContent,
           filename: data.filename,
           format: data.format,
@@ -126,18 +129,18 @@ const Results = () => {
       });
 
       toast({
-        title: "Fix generated!",
-        description: "Review your fixed dependency file.",
+        title: "Snapshot generated!",
+        description: "Review your environment snapshot.",
       });
     } catch (error) {
-      console.error('Error generating fix:', error);
+      console.error('Error generating snapshot:', error);
       toast({
-        title: "Failed to generate fix",
-        description: error instanceof Error ? error.message : "Could not generate corrected file",
+        title: "Failed to generate snapshot",
+        description: error instanceof Error ? error.message : "Could not generate snapshot file",
         variant: "destructive",
       });
     } finally {
-      setIsGeneratingFix(false);
+      setIsGeneratingSnapshot(false);
     }
   };
 
@@ -414,23 +417,23 @@ const Results = () => {
 
           {/* Action Buttons */}
           <div className="flex justify-center gap-4 pt-4 animate-fade-in flex-wrap" style={{ animationDelay: '400ms' }}>
-            {/* Only show Auto-Fix button if there are fixes to apply */}
+            {/* Only show Generate Snapshot button if there are fixes to apply */}
             {(issues.length > 0 || suggestions.length > 0 || dependencyDiff.length > 0) && (
               <Button
-                onClick={handleAutoFix}
-                disabled={isGeneratingFix}
+                onClick={handleGenerateSnapshot}
+                disabled={isGeneratingSnapshot}
                 size="lg"
                 className="h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(255,200,87,0.6)] text-base"
               >
-                {isGeneratingFix ? (
+                {isGeneratingSnapshot ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating Fix...
+                    Generating Snapshot...
                   </>
                 ) : (
                   <>
-                    <Wand2 className="w-5 h-5" />
-                    Auto-Fix
+                    <Package className="w-5 h-5" />
+                    Generate Snapshot
                   </>
                 )}
               </Button>
