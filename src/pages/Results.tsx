@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
+import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Wand2, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ResultsSkeleton from "@/components/ResultsSkeleton";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingFix, setIsGeneratingFix] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -73,6 +75,53 @@ const Results = () => {
         return "bg-blue-500/10 text-blue-500 border-blue-500/20";
       default:
         return "bg-muted/10 text-muted-foreground border-muted/20";
+    }
+  };
+
+  const handleAutoFix = async () => {
+    setIsGeneratingFix(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-fix-requirements', {
+        body: {
+          issues,
+          suggestions,
+          dependencyDiff,
+          detectedFormats,
+          primaryFormat: location.state?.primaryFormat,
+          pythonVersion,
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate fix');
+      }
+
+      // Create a download blob
+      const blob = new Blob([data.fixedContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Fixed file generated!",
+        description: `Downloaded ${data.filename} with all corrections applied.`,
+      });
+    } catch (error) {
+      console.error('Error generating fix:', error);
+      toast({
+        title: "Failed to generate fix",
+        description: error instanceof Error ? error.message : "Could not generate corrected file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingFix(false);
     }
   };
 
@@ -229,7 +278,25 @@ const Results = () => {
           </div>
 
           {/* Continue Button */}
-          <div className="flex justify-center pt-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
+          <div className="flex justify-center gap-4 pt-4 animate-fade-in flex-wrap" style={{ animationDelay: '400ms' }}>
+            <Button
+              onClick={handleAutoFix}
+              disabled={isGeneratingFix}
+              size="lg"
+              className="h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(255,200,87,0.6)] text-base"
+            >
+              {isGeneratingFix ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Generating Fix...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-5 h-5" />
+                  Auto-Fix & Download
+                </>
+              )}
+            </Button>
             <Button
               onClick={() => navigate("/snapshot", { 
                 state: { 
@@ -240,7 +307,8 @@ const Results = () => {
                 } 
               })}
               size="lg"
-              className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
+              variant="outline"
+              className="h-14 px-8 font-semibold gap-2 text-base"
             >
               <Sparkles className="w-5 h-5" />
               Generate Snapshot
