@@ -16,54 +16,59 @@ const ReproducibilityScore = () => {
     const negative: string[] = [];
     
     // Count pinned vs unpinned packages
-    const unpinnedPackages = dependencyDiff.filter((dep: any) => 
-      dep.before === "unversioned"
-    );
-    const pinnedPackages = dependencyDiff.filter((dep: any) => 
-      dep.before !== "unversioned"
-    );
+    const unpinned = dependencyDiff.filter((dep: any) => dep.before === "unversioned").length;
+    const pinned = dependencyDiff.filter((dep: any) => dep.before !== "unversioned").length;
     
-    if (unpinnedPackages.length === 0 && dependencyDiff.length > 0) {
-      positive.push("All packages have version pins");
-    } else if (pinnedPackages.length > 0) {
-      positive.push(`${pinnedPackages.length} package${pinnedPackages.length > 1 ? 's' : ''} properly pinned`);
+    // POSITIVE POINTS - Always show something meaningful
+    if (issues.length === 0) {
+      positive.push("No dependency issues detected");
+      positive.push("All packages properly configured");
     }
     
-    if (unpinnedPackages.length > 0) {
-      negative.push(`${unpinnedPackages.length} package${unpinnedPackages.length > 1 ? 's' : ''} missing version pins`);
+    if (pinned > 0) {
+      if (unpinned === 0 && dependencyDiff.length > 0) {
+        positive.push("All packages have version pins");
+      } else {
+        positive.push(`${pinned} package${pinned > 1 ? 's' : ''} properly pinned`);
+      }
     }
     
-    // Check for conflicts
-    const conflicts = issues.filter((issue: any) => 
-      issue.severity === "high" && 
-      (issue.title.toLowerCase().includes("conflict") || 
-       issue.description.toLowerCase().includes("conflict"))
+    if (dependencyDiff.length > 0) {
+      positive.push("Dependencies are documented");
+    }
+    
+    // Count issues by severity for positive checks
+    const highIssues = issues.filter((i: any) => i.severity.toLowerCase() === 'high');
+    const conflicts = issues.filter((i: any) => 
+      i.title.toLowerCase().includes("conflict") || 
+      i.description.toLowerCase().includes("conflict")
     );
+    
+    if (highIssues.length === 0 && issues.length > 0) {
+      positive.push("No critical issues found");
+    }
     
     if (conflicts.length === 0 && issues.length > 0) {
-      positive.push("No conflicting dependencies detected");
-    } else if (conflicts.length > 0) {
-      negative.push(`${conflicts.length} dependency conflict${conflicts.length > 1 ? 's' : ''} found`);
+      positive.push("No conflicting dependencies");
     }
     
-    // Check for outdated packages
-    const outdated = issues.filter((issue: any) => 
-      issue.title.toLowerCase().includes("outdated")
-    );
-    
-    if (outdated.length === 0 && issues.length > 0) {
-      positive.push("All packages are up-to-date");
-    } else if (outdated.length > 0) {
-      negative.push(`${outdated.length} outdated package${outdated.length > 1 ? 's' : ''} detected`);
+    // NEGATIVE POINTS - Based on severity and specific issues
+    if (unpinned > 0) {
+      negative.push(`${unpinned} package${unpinned > 1 ? 's' : ''} missing version pins`);
     }
     
-    // Additional checks
-    if (dependencyDiff.length > 0) {
-      positive.push("Dependencies are properly documented");
-    }
+    // Group issues by severity
+    const medIssues = issues.filter((i: any) => i.severity.toLowerCase() === 'medium');
+    const lowIssues = issues.filter((i: any) => i.severity.toLowerCase() === 'low');
     
-    if (issues.filter((i: any) => i.severity === "low").length > 0) {
-      negative.push("Minor reproducibility risks present");
+    if (highIssues.length > 0) {
+      negative.push(`${highIssues.length} high-severity issue${highIssues.length > 1 ? 's' : ''} detected`);
+    }
+    if (medIssues.length > 0) {
+      negative.push(`${medIssues.length} medium-severity issue${medIssues.length > 1 ? 's' : ''} found`);
+    }
+    if (lowIssues.length > 0) {
+      negative.push(`${lowIssues.length} minor issue${lowIssues.length > 1 ? 's' : ''} present`);
     }
     
     return { positive, negative };

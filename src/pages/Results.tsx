@@ -118,6 +118,9 @@ const Results = () => {
           format: data.format,
           fixesApplied: issues.length + suggestions.length,
           repositoryUrl,
+          reproducibilityScore: analysisData.reproducibilityScore,
+          issues,
+          dependencyDiff,
         }
       });
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Download, ArrowLeft, FileCheck } from "lucide-react";
+import { Download, ArrowLeft, FileCheck, Target, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -16,6 +16,9 @@ const FixPreview = () => {
   const format = location.state?.format || "requirements.txt";
   const fixesApplied = location.state?.fixesApplied || 0;
   const repositoryUrl = location.state?.repositoryUrl || "";
+  const reproducibilityScore = location.state?.reproducibilityScore;
+  const issues = location.state?.issues || [];
+  const dependencyDiff = location.state?.dependencyDiff || [];
 
   const handleDownload = () => {
     const blob = new Blob([fixedContent], { type: 'text/plain' });
@@ -41,6 +44,16 @@ const FixPreview = () => {
     toast({
       title: "Copied to clipboard!",
       description: "Fixed content copied successfully.",
+    });
+  };
+
+  const handleViewScore = () => {
+    navigate("/reproducibility", {
+      state: {
+        reproducibilityScore,
+        issues,
+        dependencyDiff,
+      }
     });
   };
 
@@ -134,14 +147,25 @@ const FixPreview = () => {
               <Download className="w-5 h-5" />
               Download Fixed File
             </Button>
+            {reproducibilityScore !== undefined && (
+              <Button
+                onClick={handleViewScore}
+                size="lg"
+                variant="secondary"
+                className="h-14 px-8 font-semibold gap-2 text-base"
+              >
+                <Target className="w-5 h-5" />
+                View Reproducibility Score
+              </Button>
+            )}
             <Button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
               size="lg"
               variant="outline"
               className="h-14 px-8 font-semibold gap-2 text-base"
             >
-              <ArrowLeft className="w-5 h-5" />
-              Back to Results
+              <Home className="w-5 h-5" />
+              Return Home
             </Button>
           </div>
 
