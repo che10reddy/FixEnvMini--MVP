@@ -178,21 +178,30 @@ const ReproducibilityScore = () => {
               </ul>
             </div>
 
-            {/* Negative Points */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-500" />
-                What lowered your score:
-              </h3>
-              <ul className="space-y-2 ml-7">
-                {negativePoints.map((point, index) => (
-                  <li key={index} className="text-muted-foreground flex items-start gap-2">
-                    <span className="text-yellow-500 mt-1">•</span>
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Negative Points - Only show if there are any */}
+            {negativePoints.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  What lowered your score:
+                </h3>
+                <ul className="space-y-2 ml-7">
+                  {negativePoints.map((point, index) => (
+                    <li key={index} className="text-muted-foreground flex items-start gap-2">
+                      <span className="text-yellow-500 mt-1">•</span>
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Perfect Score Message */}
+            {negativePoints.length === 0 && score === 100 && (
+              <p className="text-center text-primary font-semibold text-lg">
+                🎉 Perfect score! Your environment is fully reproducible.
+              </p>
+            )}
           </div>
 
           {/* Continue Button */}

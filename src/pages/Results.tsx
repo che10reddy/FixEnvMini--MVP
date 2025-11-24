@@ -110,20 +110,20 @@ const Results = () => {
         throw new Error(data.error || 'Failed to generate fix');
       }
 
-      // Create a download blob
-      const blob = new Blob([data.fixedContent], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = data.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // Navigate to preview page instead of downloading
+      navigate("/fix-preview", {
+        state: {
+          fixedContent: data.fixedContent,
+          filename: data.filename,
+          format: data.format,
+          fixesApplied: issues.length + suggestions.length,
+          repositoryUrl,
+        }
+      });
 
       toast({
-        title: "Fixed file generated!",
-        description: `Downloaded ${data.filename} with all corrections applied.`,
+        title: "Fix generated!",
+        description: "Review your fixed dependency file.",
       });
     } catch (error) {
       console.error('Error generating fix:', error);
@@ -540,7 +540,7 @@ const Results = () => {
                 ) : (
                   <>
                     <Wand2 className="w-5 h-5" />
-                    Auto-Fix & Download
+                    Auto-Fix
                   </>
                 )}
               </Button>
@@ -591,15 +591,17 @@ const Results = () => {
               )}
             </Dialog>
 
-            <Button
-              onClick={exportAsMarkdown}
-              size="lg"
-              variant="outline"
-              className="h-14 px-8 font-semibold gap-2 text-base"
-            >
-              <FileDown className="w-5 h-5" />
-              Export Markdown
-            </Button>
+                  {(issues.length > 0 || suggestions.length > 0) && (
+                    <Button
+                      onClick={exportAsMarkdown}
+                      size="lg"
+                      variant="outline"
+                      className="h-14 px-8 font-semibold gap-2 text-base"
+                    >
+                      <FileDown className="w-5 h-5" />
+                      Export Markdown
+                    </Button>
+                  )}
           </div>
 
           {/* CI Integration Guide */}
