@@ -1,75 +1,57 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ResultsSkeleton from "@/components/ResultsSkeleton";
-
-// Mock data for demonstration
-const issues = [
-  {
-    title: "Missing version pin",
-    package: "numpy",
-    severity: "High",
-    description: "Package installed without version constraint, may cause reproducibility issues",
-  },
-  {
-    title: "Conflicting dependency versions",
-    package: "pandas",
-    severity: "High",
-    description: "Version 1.5.0 conflicts with other packages requiring >=2.0.0",
-  },
-  {
-    title: "Outdated package",
-    package: "requests",
-    severity: "Medium",
-    description: "Using version 2.28.0, latest stable is 2.31.0",
-  },
-  {
-    title: "Missing version pin",
-    package: "torch",
-    severity: "Medium",
-    description: "Package installed without version constraint",
-  },
-];
-
-const suggestions = [
-  "Pin numpy to version 1.26.2 for stability and compatibility",
-  "Upgrade pandas from 1.5.0 to 2.1.0 to resolve conflicts",
-  "Update requests to 2.31.0 for bug fixes and improvements",
-  "Add explicit version constraint for torch: torch==2.1.0",
-  "Consider using a virtual environment for isolated dependency management",
-];
-
-const dependencyDiff = [
-  { name: "numpy", before: "unversioned", after: "1.26.2" },
-  { name: "pandas", before: "1.5.0", after: "2.1.0" },
-  { name: "requests", before: "2.28.0", after: "2.31.0" },
-  { name: "torch", before: "unversioned", after: "2.1.0" },
-  { name: "scikit-learn", before: "1.3.0", after: "1.3.0" },
-];
+import { toast } from "@/hooks/use-toast";
 
 const Results = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate data loading
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2000);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, []);
 
+  // Get analysis data from navigation state
+  const analysisData = location.state?.analysisData;
+  const rawRequirements = location.state?.rawRequirements;
+
+  // Redirect if no data
+  useEffect(() => {
+    if (!isLoading && !analysisData) {
+      toast({
+        title: "No analysis data",
+        description: "Please scan a repository first",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [isLoading, analysisData, navigate]);
+
+  if (!analysisData) {
+    return null;
+  }
+
+  const issues = analysisData.issues || [];
+  const suggestions = analysisData.suggestions || [];
+  const dependencyDiff = analysisData.dependencyDiff || [];
+
   const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case "High":
+    const severityLower = severity.toLowerCase();
+    switch (severityLower) {
+      case "high":
         return <AlertTriangle className="w-5 h-5 text-destructive" />;
-      case "Medium":
+      case "medium":
         return <AlertCircle className="w-5 h-5 text-yellow-500" />;
-      case "Low":
+      case "low":
         return <Info className="w-5 h-5 text-blue-500" />;
       default:
         return <Info className="w-5 h-5 text-muted-foreground" />;
@@ -77,12 +59,13 @@ const Results = () => {
   };
 
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "High":
+    const severityLower = severity.toLowerCase();
+    switch (severityLower) {
+      case "high":
         return "bg-destructive/10 text-destructive border-destructive/20";
-      case "Medium":
+      case "medium":
         return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-      case "Low":
+      case "low":
         return "bg-blue-500/10 text-blue-500 border-blue-500/20";
       default:
         return "bg-muted/10 text-muted-foreground border-muted/20";
@@ -170,10 +153,10 @@ const Results = () => {
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
                   Detected Versions
                 </h3>
-                <div className="bg-codeBg border border-border rounded-lg p-4 space-y-2">
-                  {dependencyDiff.map((dep, index) => (
+                  <div className="bg-codeBg border border-border rounded-lg p-4 space-y-2">
+                  {dependencyDiff.map((dep: any, index: number) => (
                     <div key={index} className="code-font text-sm">
-                      <span className="text-foreground">{dep.name}</span>
+                      <span className="text-foreground">{dep.package}</span>
                       <span className="text-muted-foreground"> == </span>
                       <span className={dep.before === "unversioned" ? "text-destructive" : "text-muted-foreground"}>
                         {dep.before}
@@ -189,9 +172,9 @@ const Results = () => {
                   Suggested Versions
                 </h3>
                 <div className="bg-codeBg border border-primary/20 rounded-lg p-4 space-y-2 glow-border">
-                  {dependencyDiff.map((dep, index) => (
+                  {dependencyDiff.map((dep: any, index: number) => (
                     <div key={index} className="code-font text-sm">
-                      <span className="text-foreground">{dep.name}</span>
+                      <span className="text-foreground">{dep.package}</span>
                       <span className="text-muted-foreground"> == </span>
                       <span className="text-primary font-medium">{dep.after}</span>
                     </div>
@@ -204,7 +187,12 @@ const Results = () => {
           {/* Continue Button */}
           <div className="flex justify-center pt-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
             <Button
-              onClick={() => navigate("/snapshot")}
+              onClick={() => navigate("/snapshot", { 
+                state: { 
+                  dependencyDiff, 
+                  reproducibilityScore: analysisData.reproducibilityScore,
+                } 
+              })}
               size="lg"
               className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
             >

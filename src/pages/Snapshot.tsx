@@ -2,34 +2,65 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, FileCode, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Footer from "@/components/Footer";
 import SnapshotSkeleton from "@/components/SnapshotSkeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 const Snapshot = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
+  const [snapshotData, setSnapshotData] = useState<any>(null);
 
   useEffect(() => {
-    // Simulate snapshot generation
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+    const generateSnapshot = async () => {
+      const dependencyDiff = location.state?.dependencyDiff;
+      const reproducibilityScore = location.state?.reproducibilityScore;
 
-    return () => clearTimeout(timer);
-  }, []);
+      if (!dependencyDiff) {
+        toast({
+          title: "No dependency data",
+          description: "Please complete the analysis first",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
 
-  const snapshotData = {
-    python_version: "3.10",
-    dependencies: {
-      numpy: "1.26.2",
-      pandas: "2.1.0",
-      requests: "2.31.0",
-      flask: "3.0.0",
-      pytest: "7.4.3"
-    },
-    checksum: "sha256:98ab23cd1f4e9a2b..."
-  };
+      try {
+        // Convert dependency diff to dependencies object
+        const dependencies: Record<string, string> = {};
+        dependencyDiff.forEach((dep: any) => {
+          dependencies[dep.package] = dep.after;
+        });
+
+        const { data, error } = await supabase.functions.invoke('generate-snapshot', {
+          body: { dependencies }
+        });
+
+        if (error) throw error;
+
+        if (!data.success) {
+          throw new Error(data.error || 'Snapshot generation failed');
+        }
+
+        setSnapshotData(data.snapshot);
+        setIsLoading(false);
+
+      } catch (error) {
+        console.error('Error generating snapshot:', error);
+        toast({
+          title: "Generation Failed",
+          description: error instanceof Error ? error.message : "Could not generate snapshot",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate("/"), 2000);
+      }
+    };
+
+    generateSnapshot();
+  }, [navigate, location]);
 
   const handleDownload = () => {
     const dataStr = JSON.stringify(snapshotData, null, 2);
@@ -88,11 +119,11 @@ const Snapshot = () => {
                   {'\n  '}<span className="text-accent">"dependencies"</span>: {'{'}
                   {Object.entries(snapshotData.dependencies).map(([key, value], index, array) => (
                     <span key={key}>
-                      {'\n    '}<span className="text-accent">"{key}"</span>: <span className="text-primary">"{value}"</span>{index < array.length - 1 ? ',' : ''}
+                      {'\n    '}<span className="text-accent">"{key}"</span>: <span className="text-primary">"{String(value)}"</span>{index < array.length - 1 ? ',' : ''}
                     </span>
                   ))}
                   {'\n  '}{'}'}, 
-                  {'\n  '}<span className="text-accent">"checksum"</span>: <span className="text-primary">"{snapshotData.checksum}"</span>
+                  {'\n  '}<span className="text-accent">"checksum"</span>: <span className="text-primary">"{snapshotData?.checksum || ''}"</span>
                   {'\n'}{`}`}
                 </code>
               </pre>
@@ -111,7 +142,9 @@ const Snapshot = () => {
               Download Snapshot (.zfix)
             </Button>
             <Button 
-              onClick={() => navigate("/reproducibility")}
+              onClick={() => navigate("/reproducibility", {
+                state: { reproducibilityScore: location.state?.reproducibilityScore }
+              })}
               size="lg"
               className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
             >

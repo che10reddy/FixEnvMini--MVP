@@ -56,7 +56,7 @@ const Hero = () => {
       return;
     }
     
-    navigate("/scanning");
+    navigate("/scanning", { state: { repoUrl } });
   };
 
   return (

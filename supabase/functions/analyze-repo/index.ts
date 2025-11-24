@@ -1,0 +1,142 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { repoUrl } = await req.json();
+    console.log('Analyzing repo:', repoUrl);
+
+    // Extract owner and repo from GitHub URL
+    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!match) {
+      throw new Error('Invalid GitHub URL format');
+    }
+
+    const [, owner, repo] = match;
+    const repoName = repo.replace('.git', '');
+
+    // Fetch requirements.txt from GitHub
+    const requirementsUrl = `https://raw.githubusercontent.com/${owner}/${repoName}/main/requirements.txt`;
+    console.log('Fetching requirements from:', requirementsUrl);
+    
+    let requirementsContent;
+    try {
+      const response = await fetch(requirementsUrl);
+      if (!response.ok) {
+        // Try master branch if main doesn't exist
+        const masterUrl = `https://raw.githubusercontent.com/${owner}/${repoName}/master/requirements.txt`;
+        const masterResponse = await fetch(masterUrl);
+        if (!masterResponse.ok) {
+          throw new Error('requirements.txt not found in main or master branch');
+        }
+        requirementsContent = await masterResponse.text();
+      } else {
+        requirementsContent = await response.text();
+      }
+    } catch (error) {
+      console.error('Error fetching requirements.txt:', error);
+      throw new Error('Could not fetch requirements.txt from repository');
+    }
+
+    console.log('Requirements content length:', requirementsContent.length);
+
+    // Analyze with AI
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
+    }
+
+    const aiPrompt = `You are a Python dependency expert. Analyze this requirements.txt file and provide:
+
+1. Issues found (missing version pins, conflicts, outdated packages)
+2. AI fix suggestions (specific version recommendations)
+3. Dependency diff (before and after versions)
+4. A reproducibility score (0-100) based on how well the environment is configured
+
+Requirements.txt content:
+\`\`\`
+${requirementsContent}
+\`\`\`
+
+Respond with a JSON object with this exact structure:
+{
+  "issues": [
+    {
+      "title": "Issue title",
+      "package": "package-name",
+      "severity": "high|medium|low",
+      "description": "Detailed description"
+    }
+  ],
+  "suggestions": [
+    "Specific actionable suggestion as a string"
+  ],
+  "dependencyDiff": [
+    {
+      "package": "package-name",
+      "before": "detected version or 'unversioned'",
+      "after": "suggested version"
+    }
+  ],
+  "reproducibilityScore": 85
+}`;
+
+    console.log('Calling AI for analysis...');
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a Python dependency analysis expert. Always respond with valid JSON only, no additional text.' 
+          },
+          { role: 'user', content: aiPrompt }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('AI API error:', aiResponse.status, errorText);
+      throw new Error(`AI analysis failed: ${aiResponse.status}`);
+    }
+
+    const aiData = await aiResponse.json();
+    console.log('AI response received');
+    
+    const analysisResult = JSON.parse(aiData.choices[0].message.content);
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: analysisResult,
+      rawRequirements: requirementsContent,
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in analyze-repo:', error);
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});

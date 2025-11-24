@@ -1,0 +1,7 @@
+project_id = "ncafkcmxumkklboonfhs"
+
+[functions.analyze-repo]
+verify_jwt = false
+
+[functions.generate-snapshot]
+verify_jwt = false
