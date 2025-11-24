@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Download, ArrowLeft, FileCheck, Target, Home } from "lucide-react";
+import { Download, FileCheck, Target, Home, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "@/hooks/use-toast";
@@ -10,10 +15,13 @@ const FixPreview = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
+  const [isFixedDepsOpen, setIsFixedDepsOpen] = useState(false);
+  const [isFullZfixOpen, setIsFullZfixOpen] = useState(false);
 
+  const zfixData = location.state?.zfixData;
   const fixedContent = location.state?.fixedContent || "";
-  const filename = location.state?.filename || "requirements.txt";
-  const format = location.state?.format || "requirements.txt";
+  const filename = location.state?.filename || "environment.zfix";
+  const format = location.state?.format || ".zfix";
   const fixesApplied = location.state?.fixesApplied || 0;
   const repositoryUrl = location.state?.repositoryUrl || "";
   const reproducibilityScore = location.state?.reproducibilityScore;
@@ -21,7 +29,8 @@ const FixPreview = () => {
   const dependencyDiff = location.state?.dependencyDiff || [];
 
   const handleDownload = () => {
-    const blob = new Blob([fixedContent], { type: 'text/plain' });
+    const content = JSON.stringify(zfixData, null, 2);
+    const blob = new Blob([content], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -32,18 +41,19 @@ const FixPreview = () => {
     window.URL.revokeObjectURL(url);
 
     toast({
-      title: "File downloaded!",
+      title: "Snapshot downloaded!",
       description: `${filename} has been downloaded successfully.`,
     });
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(fixedContent);
+    const content = JSON.stringify(zfixData, null, 2);
+    navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast({
       title: "Copied to clipboard!",
-      description: "Fixed content copied successfully.",
+      description: "Snapshot data copied successfully.",
     });
   };
 
@@ -66,73 +76,178 @@ const FixPreview = () => {
           <div className="text-center space-y-4 animate-fade-in">
             <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight">
               <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent glow-text">
-                Auto-Fixed Dependencies
+                Environment Snapshot (.zfix)
               </span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Review your corrected dependency file before downloading.
+              A complete, portable record of your environment analysis and fixes.
             </p>
           </div>
 
           {/* Metadata Card */}
           <div 
-            className="bg-card/50 border border-border rounded-xl p-6 backdrop-blur-sm animate-fade-in flex items-center justify-between flex-wrap gap-4"
+            className="bg-card/50 border border-border rounded-xl p-6 backdrop-blur-sm animate-fade-in"
             style={{ animationDelay: '100ms' }}
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <FileCheck className="w-6 h-6 text-primary" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Package className="w-5 h-5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground text-lg">
-                  {filename}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {fixesApplied} fix{fixesApplied !== 1 ? 'es' : ''} applied • {format}
+              <h2 className="text-xl font-bold text-foreground">Snapshot Metadata</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Repository</p>
+                <p className="text-sm text-foreground font-mono truncate">{zfixData?.metadata?.repository_url || 'Unknown'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Python Version</p>
+                <p className="text-sm text-foreground font-mono">{zfixData?.metadata?.python_version || 'Unknown'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Generated At</p>
+                <p className="text-sm text-foreground font-mono">
+                  {zfixData?.generated_at ? new Date(zfixData.generated_at).toLocaleString() : 'Unknown'}
                 </p>
               </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Detected Formats</p>
+                <div className="flex gap-2 flex-wrap">
+                  {(zfixData?.metadata?.detected_formats || []).map((fmt: string, idx: number) => (
+                    <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                      {fmt}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
-            <Button
-              onClick={handleCopy}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              {copied ? "Copied!" : "Copy to Clipboard"}
-            </Button>
           </div>
 
-          {/* Code Preview Card */}
+          {/* Analysis Summary Card */}
           <div 
-            className="bg-codeBg border border-border rounded-xl overflow-hidden animate-fade-in"
-            style={{ animationDelay: '200ms' }}
+            className="bg-card/50 border border-border rounded-xl p-6 backdrop-blur-sm animate-fade-in"
+            style={{ animationDelay: '150ms' }}
           >
-            <div className="bg-card/30 border-b border-border px-6 py-3">
-              <p className="text-sm text-muted-foreground font-mono">
-                {filename}
-              </p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Target className="w-5 h-5 text-accent" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground">Analysis Summary</h2>
             </div>
-            <div className="p-6 overflow-x-auto max-h-[500px] overflow-y-auto">
-              <pre className="code-font text-sm leading-relaxed">
-                <code className="text-foreground">
-                  {fixedContent.split('\n').map((line, index) => (
-                    <div key={index} className="hover:bg-primary/5 transition-colors px-2 -mx-2 rounded">
-                      <span className="inline-block w-12 text-muted-foreground select-none">
-                        {index + 1}
-                      </span>
-                      <span className={
-                        line.startsWith('#') ? 'text-muted-foreground' :
-                        line.includes('==') ? 'text-primary' :
-                        'text-foreground'
-                      }>
-                        {line || ' '}
-                      </span>
-                    </div>
-                  ))}
-                </code>
-              </pre>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <p className="text-2xl font-bold text-primary">{zfixData?.analysis?.reproducibility_score || 0}%</p>
+                <p className="text-sm text-muted-foreground mt-1">Reproducibility Score</p>
+              </div>
+              <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+                <p className="text-2xl font-bold text-destructive">{zfixData?.analysis?.total_issues || 0}</p>
+                <p className="text-sm text-muted-foreground mt-1">Issues Detected</p>
+              </div>
+              <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
+                <p className="text-2xl font-bold text-accent">{(zfixData?.analysis?.suggestions || []).length}</p>
+                <p className="text-sm text-muted-foreground mt-1">AI Suggestions</p>
+              </div>
             </div>
           </div>
+
+          {/* Fixed Dependencies Preview - Collapsible */}
+          <Collapsible
+            open={isFixedDepsOpen}
+            onOpenChange={setIsFixedDepsOpen}
+            className="bg-card/50 border border-border rounded-xl backdrop-blur-sm animate-fade-in"
+            style={{ animationDelay: '200ms' }}
+          >
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-6 py-4 flex items-center justify-between hover:bg-card/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <FileCheck className="w-5 h-5 text-primary" />
+                  <h2 className="text-xl font-bold text-foreground">Fixed Dependencies</h2>
+                </div>
+                {isFixedDepsOpen ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-6 pb-6">
+                <div className="bg-codeBg border border-border rounded-lg overflow-hidden">
+                  <div className="bg-card/30 border-b border-border px-4 py-2">
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {zfixData?.fixed_dependencies?.format || 'requirements.txt'}
+                    </p>
+                  </div>
+                  <div className="p-4 overflow-x-auto max-h-[400px] overflow-y-auto">
+                    <pre className="code-font text-sm leading-relaxed">
+                      <code className="text-foreground">
+                        {fixedContent.split('\n').map((line, index) => (
+                          <div key={index} className="hover:bg-primary/5 transition-colors px-2 -mx-2 rounded">
+                            <span className="inline-block w-10 text-muted-foreground select-none text-xs">
+                              {index + 1}
+                            </span>
+                            <span className={
+                              line.startsWith('#') ? 'text-muted-foreground' :
+                              line.includes('==') ? 'text-primary' :
+                              'text-foreground'
+                            }>
+                              {line || ' '}
+                            </span>
+                          </div>
+                        ))}
+                      </code>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Full .zfix Structure - Collapsible */}
+          <Collapsible
+            open={isFullZfixOpen}
+            onOpenChange={setIsFullZfixOpen}
+            className="bg-card/50 border border-border rounded-xl backdrop-blur-sm animate-fade-in"
+            style={{ animationDelay: '250ms' }}
+          >
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-6 py-4 flex items-center justify-between hover:bg-card/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Package className="w-5 h-5 text-accent" />
+                  <h2 className="text-xl font-bold text-foreground">Full .zfix Structure</h2>
+                </div>
+                {isFullZfixOpen ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-6 pb-6">
+                <div className="bg-codeBg border border-border rounded-lg overflow-hidden">
+                  <div className="bg-card/30 border-b border-border px-4 py-2 flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground font-mono">environment.zfix (JSON)</p>
+                    <Button
+                      onClick={handleCopy}
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1"
+                    >
+                      {copied ? "Copied!" : "Copy JSON"}
+                    </Button>
+                  </div>
+                  <div className="p-4 overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <pre className="code-font text-xs leading-relaxed">
+                      <code className="text-foreground">
+                        {JSON.stringify(zfixData, null, 2)}
+                      </code>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Action Buttons */}
           <div 
@@ -145,7 +260,7 @@ const FixPreview = () => {
               className="h-14 px-8 font-semibold gap-2 text-base"
             >
               <Download className="w-5 h-5" />
-              Download Fixed File
+              Download Snapshot (.zfix)
             </Button>
             {reproducibilityScore !== undefined && (
               <Button
@@ -170,16 +285,14 @@ const FixPreview = () => {
           </div>
 
           {/* Info Card */}
-          {repositoryUrl && (
-            <div 
-              className="bg-accent/5 border border-accent/20 rounded-lg p-4 text-center animate-fade-in"
-              style={{ animationDelay: '400ms' }}
-            >
-              <p className="text-sm text-muted-foreground">
-                Replace your existing <code className="code-font text-xs bg-codeBg px-2 py-0.5 rounded text-accent">{filename}</code> with this corrected version
-              </p>
-            </div>
-          )}
+          <div 
+            className="bg-accent/5 border border-accent/20 rounded-lg p-4 text-center animate-fade-in"
+            style={{ animationDelay: '350ms' }}
+          >
+            <p className="text-sm text-muted-foreground">
+              The <code className="code-font text-xs bg-codeBg px-2 py-0.5 rounded text-accent">.zfix</code> file contains your complete environment analysis and can be shared or version-controlled
+            </p>
+          </div>
         </div>
       </section>
       <Footer />

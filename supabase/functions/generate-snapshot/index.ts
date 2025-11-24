@@ -12,11 +12,23 @@ serve(async (req) => {
   }
 
   try {
-    const { issues, suggestions, dependencyDiff, detectedFormats, primaryFormat, pythonVersion, rawRequirements } = await req.json();
-    console.log('Auto-fix request received');
+    const { 
+      issues, 
+      suggestions, 
+      dependencyDiff, 
+      detectedFormats, 
+      primaryFormat, 
+      pythonVersion, 
+      rawRequirements,
+      repositoryUrl,
+      reproducibilityScore 
+    } = await req.json();
+    
+    console.log('Snapshot generation request received');
+    console.log('Repository:', repositoryUrl);
     console.log('Primary format:', primaryFormat);
     console.log('Python version:', pythonVersion);
-    console.log('Raw requirements length:', rawRequirements?.length || 0);
+    console.log('Reproducibility score:', reproducibilityScore);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -177,24 +189,61 @@ CRITICAL: Respond with ONLY the complete file content with inline comments. No e
     const aiData = await aiResponse.json();
     console.log('AI response received');
     
-    let content = aiData.choices[0].message.content;
+    let fixedContent = aiData.choices[0].message.content;
     
     // Clean up any markdown formatting
-    content = content.replace(/```[a-z]*\n?/gi, '').trim();
+    fixedContent = fixedContent.replace(/```[a-z]*\n?/gi, '').trim();
     
-    console.log('Generated file preview:', content.substring(0, 200));
+    console.log('Generated file preview:', fixedContent.substring(0, 200));
+
+    // Build the complete .zfix structure
+    const timestamp = new Date().toISOString();
+    const zfixData = {
+      version: "1.0",
+      generated_at: timestamp,
+      generator: "FixEnv Mini",
+      metadata: {
+        repository_url: repositoryUrl || "unknown",
+        python_version: pythonVersion || "unknown",
+        detected_formats: detectedFormats || [],
+        primary_format: primaryFormat || outputFormat,
+        scan_timestamp: timestamp,
+      },
+      analysis: {
+        reproducibility_score: reproducibilityScore || 0,
+        total_issues: issues.length,
+        issues: issues.map((issue: any) => ({
+          severity: issue.severity,
+          title: issue.title,
+          package: issue.package,
+          description: issue.description,
+        })),
+        suggestions: suggestions,
+        dependency_changes: dependencyDiff.map((dep: any) => ({
+          package: dep.package,
+          before: dep.before,
+          after: dep.after,
+          reason: dep.reason || "Version correction applied",
+        })),
+      },
+      fixed_dependencies: {
+        format: outputFormat,
+        content: fixedContent,
+      },
+    };
 
     return new Response(JSON.stringify({
       success: true,
-      fixedContent: content,
-      filename: outputFormat,
-      format: outputFormat,
+      zfixData: zfixData,
+      fixedContent: fixedContent,
+      filename: 'environment.zfix',
+      format: '.zfix',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in auto-fix-requirements:', error);
+    console.error('Error in generate-snapshot:', error);
     return new Response(JSON.stringify({ 
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred' 
