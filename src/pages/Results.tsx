@@ -3,12 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Wand2, Download, Loader2, Share2, FileDown, BookOpen, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -194,65 +188,104 @@ const Results = () => {
     });
   };
 
-  const exportAsJSON = () => {
-    const exportData = {
-      repository: repositoryUrl,
-      analysisDate: new Date().toISOString(),
-      pythonVersion,
-      detectedFormats,
-      issues,
-      suggestions,
-      dependencyDiff,
-      reproducibilityScore: analysisData.reproducibilityScore,
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'fixenv-analysis.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    toast({
-      title: "Exported as JSON",
-      description: "Analysis exported successfully.",
-    });
-  };
-
   const exportAsMarkdown = () => {
+    const score = analysisData.reproducibilityScore || 0;
+    const scoreColor = score >= 80 ? 'brightgreen' : score >= 50 ? 'yellow' : 'red';
+    
     let markdown = `# FixEnv Analysis Report\n\n`;
+    
+    // Reproducibility Badge
+    markdown += `![Reproducibility Score](https://img.shields.io/badge/Reproducibility-${score}%25-${scoreColor}?style=for-the-badge&logo=python)\n`;
+    markdown += `![Python Version](https://img.shields.io/badge/Python-${pythonVersion || 'Unknown'}-blue?style=flat-square&logo=python)\n`;
+    markdown += `![Issues Found](https://img.shields.io/badge/Issues-${issues.length}-${issues.length === 0 ? 'brightgreen' : 'orange'}?style=flat-square)\n\n`;
+    
     markdown += `**Repository:** ${repositoryUrl}\n`;
     markdown += `**Analysis Date:** ${new Date().toLocaleDateString()}\n`;
-    markdown += `**Python Version:** ${pythonVersion || 'Not detected'}\n`;
-    markdown += `**Reproducibility Score:** ${analysisData.reproducibilityScore || 'N/A'}\n\n`;
+    markdown += `**Python Version:** ${pythonVersion || 'Not detected'}\n\n`;
     
-    markdown += `## Detected Formats\n\n`;
+    markdown += `---\n\n`;
+    
+    // Executive Summary
+    markdown += `## 📊 Executive Summary\n\n`;
+    if (issues.length === 0) {
+      markdown += `✅ **No issues detected!** This repository has excellent dependency hygiene with all packages properly pinned and no conflicts.\n\n`;
+    } else {
+      markdown += `⚠️ **${issues.length} issue(s) detected** that may affect reproducibility.\n\n`;
+      const highSeverity = issues.filter((i: any) => i.severity.toLowerCase() === 'high').length;
+      const mediumSeverity = issues.filter((i: any) => i.severity.toLowerCase() === 'medium').length;
+      const lowSeverity = issues.filter((i: any) => i.severity.toLowerCase() === 'low').length;
+      
+      if (highSeverity > 0) markdown += `- 🔴 **${highSeverity}** High severity\n`;
+      if (mediumSeverity > 0) markdown += `- 🟡 **${mediumSeverity}** Medium severity\n`;
+      if (lowSeverity > 0) markdown += `- 🔵 **${lowSeverity}** Low severity\n`;
+      markdown += `\n`;
+    }
+    
+    // Detected Formats
+    markdown += `### Detected Dependency Files\n\n`;
     foundFiles.forEach((file: any) => {
-      markdown += `- ${file.format}\n`;
+      markdown += `- \`${file.format}\`\n`;
     });
+    markdown += `\n---\n\n`;
     
-    markdown += `\n## Issues Found (${issues.length})\n\n`;
-    issues.forEach((issue: any, i: number) => {
-      markdown += `### ${i + 1}. ${issue.title}\n`;
-      markdown += `**Package:** \`${issue.package}\`\n`;
-      markdown += `**Severity:** ${issue.severity}\n`;
-      markdown += `**Description:** ${issue.description}\n\n`;
-    });
+    // Issues - GitHub Issues Format
+    if (issues.length > 0) {
+      markdown += `## 🐛 Issues Found\n\n`;
+      markdown += `<details>\n<summary><b>Click to expand ${issues.length} issue(s)</b></summary>\n\n`;
+      
+      issues.forEach((issue: any, i: number) => {
+        const severityEmoji = issue.severity.toLowerCase() === 'high' ? '🔴' : 
+                              issue.severity.toLowerCase() === 'medium' ? '🟡' : '🔵';
+        markdown += `### ${severityEmoji} ${issue.title}\n\n`;
+        markdown += `**Package:** \`${issue.package}\`  \n`;
+        markdown += `**Severity:** ${issue.severity}  \n`;
+        markdown += `**Description:** ${issue.description}\n\n`;
+        
+        if (i < issues.length - 1) markdown += `---\n\n`;
+      });
+      
+      markdown += `</details>\n\n`;
+    }
     
-    markdown += `## AI Suggestions\n\n`;
-    suggestions.forEach((suggestion: string, i: number) => {
-      markdown += `${i + 1}. ${suggestion}\n`;
-    });
+    // AI Suggestions - PR Ready Format
+    if (suggestions.length > 0) {
+      markdown += `## 🤖 AI-Generated Fix Recommendations\n\n`;
+      markdown += `The following changes are recommended to improve reproducibility:\n\n`;
+      suggestions.forEach((suggestion: string, i: number) => {
+        markdown += `- [ ] ${suggestion}\n`;
+      });
+      markdown += `\n`;
+    }
     
-    markdown += `\n## Dependency Changes\n\n`;
-    markdown += `| Package | Before | After |\n`;
-    markdown += `|---------|--------|-------|\n`;
-    dependencyDiff.forEach((dep: any) => {
-      markdown += `| ${dep.package} | ${dep.before} | ${dep.after} |\n`;
-    });
+    // Dependency Changes - PR Format
+    if (dependencyDiff.length > 0) {
+      markdown += `## 📦 Proposed Dependency Changes\n\n`;
+      markdown += `\`\`\`diff\n`;
+      dependencyDiff.forEach((dep: any) => {
+        if (dep.before === "unversioned") {
+          markdown += `+ ${dep.package}==${dep.after}\n`;
+        } else {
+          markdown += `- ${dep.package}==${dep.before}\n`;
+          markdown += `+ ${dep.package}==${dep.after}\n`;
+        }
+      });
+      markdown += `\`\`\`\n\n`;
+      
+      markdown += `<details>\n<summary><b>View detailed comparison table</b></summary>\n\n`;
+      markdown += `| Package | Current Version | Recommended Version |\n`;
+      markdown += `|---------|-----------------|---------------------|\n`;
+      dependencyDiff.forEach((dep: any) => {
+        markdown += `| \`${dep.package}\` | ${dep.before} | **${dep.after}** |\n`;
+      });
+      markdown += `\n</details>\n\n`;
+    }
+    
+    // Footer
+    markdown += `---\n\n`;
+    markdown += `<div align="center">\n\n`;
+    markdown += `**Generated by [FixEnv Mini](https://fixenv.dev)** 🔧\n\n`;
+    markdown += `*Automated Python dependency analysis and reproducibility scoring*\n\n`;
+    markdown += `</div>\n`;
 
     const blob = new Blob([markdown], { type: 'text/markdown' });
     const url = window.URL.createObjectURL(blob);
@@ -266,7 +299,7 @@ const Results = () => {
 
     toast({
       title: "Exported as Markdown",
-      description: "Analysis exported successfully.",
+      description: "PR-ready report with badges and formatted issues.",
     });
   };
 
@@ -530,42 +563,14 @@ const Results = () => {
               )}
             </Dialog>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-14 px-8 font-semibold gap-2 text-base"
-                >
-                  <FileDown className="w-5 h-5" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={exportAsJSON}>
-                  Export as JSON
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportAsMarkdown}>
-                  Export as Markdown
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             <Button
-              onClick={() => navigate("/snapshot", { 
-                state: { 
-                  dependencyDiff,
-                  reproducibilityScore: analysisData.reproducibilityScore,
-                  issues,
-                  suggestions,
-                } 
-              })}
+              onClick={exportAsMarkdown}
               size="lg"
               variant="outline"
               className="h-14 px-8 font-semibold gap-2 text-base"
             >
-              <Sparkles className="w-5 h-5" />
-              Generate Snapshot
+              <FileDown className="w-5 h-5" />
+              Export Markdown
             </Button>
           </div>
 
