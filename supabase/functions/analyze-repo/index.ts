@@ -24,30 +24,53 @@ serve(async (req) => {
     const [, owner, repo] = match;
     const repoName = repo.replace('.git', '');
 
-    // Fetch requirements.txt from GitHub
-    const requirementsUrl = `https://raw.githubusercontent.com/${owner}/${repoName}/main/requirements.txt`;
-    console.log('Fetching requirements from:', requirementsUrl);
-    
-    let requirementsContent;
-    try {
-      const response = await fetch(requirementsUrl);
-      if (!response.ok) {
-        // Try master branch if main doesn't exist
-        const masterUrl = `https://raw.githubusercontent.com/${owner}/${repoName}/master/requirements.txt`;
-        const masterResponse = await fetch(masterUrl);
-        if (!masterResponse.ok) {
-          throw new Error('requirements.txt not found in main or master branch');
+    // Detect branch (main or master)
+    console.log(`Detecting branch for ${owner}/${repoName}...`);
+    let branch = 'main';
+    const testMainResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repoName}/branches/main`
+    );
+    if (!testMainResponse.ok) {
+      branch = 'master';
+    }
+    console.log(`Using branch: ${branch}`);
+
+    // Fetch multiple dependency file types
+    const fileChecks = [
+      { name: 'requirements.txt', type: 'pip', format: 'Requirements.txt' },
+      { name: 'pyproject.toml', type: 'poetry', format: 'Poetry (pyproject.toml)' },
+      { name: 'poetry.lock', type: 'poetry-lock', format: 'Poetry Lock' },
+      { name: 'Pipfile', type: 'pipenv', format: 'Pipenv' },
+      { name: 'Pipfile.lock', type: 'pipenv-lock', format: 'Pipenv Lock' },
+      { name: 'setup.py', type: 'setuptools', format: 'Setup.py' },
+    ];
+
+    const foundFiles: Array<{ name: string; type: string; format: string; content: string }> = [];
+
+    for (const file of fileChecks) {
+      try {
+        const response = await fetch(
+          `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${file.name}`
+        );
+        if (response.ok) {
+          const content = await response.text();
+          foundFiles.push({ name: file.name, type: file.type, format: file.format, content });
+          console.log(`✓ Found ${file.name} (${content.length} bytes)`);
         }
-        requirementsContent = await masterResponse.text();
-      } else {
-        requirementsContent = await response.text();
+      } catch (error) {
+        // File doesn't exist, continue
       }
-    } catch (error) {
-      console.error('Error fetching requirements.txt:', error);
-      throw new Error('Could not fetch requirements.txt from repository');
     }
 
-    console.log('Requirements content length:', requirementsContent.length);
+    if (foundFiles.length === 0) {
+      throw new Error('No Python dependency files found (requirements.txt, pyproject.toml, Pipfile, or setup.py)');
+    }
+
+    console.log(`Found ${foundFiles.length} dependency file(s):`, foundFiles.map(f => f.name).join(', '));
+    
+    // Determine primary format
+    const detectedFormats = [...new Set(foundFiles.map(f => f.format))];
+    const primaryFormat = foundFiles[0].format;
 
     // Analyze with AI
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -55,7 +78,16 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const aiPrompt = `You are an expert Python dependency analyst. Analyze this requirements.txt file using your knowledge of common dependency issues.
+    // Build comprehensive dependency analysis prompt
+    let filesContent = '';
+    foundFiles.forEach(file => {
+      filesContent += `\n--- ${file.name} (${file.format}) ---\n${file.content}\n`;
+    });
+
+    const aiPrompt = `You are an expert Python dependency analyst. Analyze the following Python dependency file(s) using your knowledge of common dependency issues.
+
+DETECTED FILES:
+${foundFiles.map(f => `- ${f.name} (${f.format})`).join('\n')}
 
 KNOWN PATTERNS TO DETECT:
 
@@ -80,6 +112,10 @@ KNOWN PATTERNS TO DETECT:
 10. Indirect Conflicts: transformers 4.33+ requires tokenizers 0.14+
 11. Wrong Build Types: GPU builds (torch+cu118) on CPU systems
 12. Typos: Common misspellings (numpi → numpy)
+13. Multi-Format Issues:
+    - Poetry: Check for dev-dependencies that should be in main dependencies
+    - Pipenv: Look for conflicts between Pipfile and Pipfile.lock
+    - Setup.py: Check for missing install_requires or incorrect version constraints
 
 FEW-SHOT EXAMPLES:
 
@@ -103,11 +139,9 @@ Input: "sklearn==0.0"
 Output Issue: {"title": "Deprecated package 'sklearn'", "package": "sklearn", "severity": "medium", "category": "outdated", "description": "sklearn is a deprecated meta-package, use scikit-learn instead"}
 Output Suggestion: "Replace with scikit-learn==1.3.0"
 
-NOW ANALYZE THIS REQUIREMENTS.TXT:
+NOW ANALYZE THESE DEPENDENCY FILES:
 
-\`\`\`
-${requirementsContent}
-\`\`\`
+${filesContent}
 
 CRITICAL: Respond ONLY with a valid JSON object. No markdown, no explanatory text, raw JSON only.
 
@@ -229,7 +263,10 @@ CATEGORY RULES:
     return new Response(JSON.stringify({
       success: true,
       data: analysisResult,
-      rawRequirements: requirementsContent,
+      detectedFormats: detectedFormats,
+      primaryFormat: primaryFormat,
+      foundFiles: foundFiles.map(f => ({ name: f.name, format: f.format })),
+      rawRequirements: foundFiles[0].content, // Keep for backward compatibility
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
