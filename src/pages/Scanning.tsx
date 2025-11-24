@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ScanningSkeleton from "@/components/ScanningSkeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const steps = [
   "Fetching repository",
@@ -17,31 +19,71 @@ const Scanning = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Initial loading delay
-    const loadingTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+    const analyzeRepo = async () => {
+      const repoUrl = location.state?.repoUrl;
+      
+      if (!repoUrl) {
+        toast({
+          title: "Error",
+          description: "No repository URL provided",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
 
-    return () => clearTimeout(loadingTimer);
-  }, []);
+      // Show progress through steps
+      const progressInterval = setInterval(() => {
+        setCurrentStep(prev => {
+          if (prev < steps.length) return prev + 1;
+          return prev;
+        });
+      }, 800);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev < steps.length - 1) {
-          return prev + 1;
-        } else {
-          // Navigate to results when complete
-          setTimeout(() => navigate("/results"), 1000);
+      // Initial loading delay
+      setTimeout(() => setIsLoading(false), 1000);
+
+      try {
+        const { data, error } = await supabase.functions.invoke('analyze-repo', {
+          body: { repoUrl }
+        });
+
+        clearInterval(progressInterval);
+        setCurrentStep(steps.length);
+
+        if (error) throw error;
+
+        if (!data.success) {
+          throw new Error(data.error || 'Analysis failed');
         }
-        return prev;
-      });
-    }, 2000);
 
-    return () => clearInterval(interval);
-  }, [navigate]);
+        // Navigate to results with the analysis data
+        setTimeout(() => {
+          navigate("/results", { 
+            state: { 
+              analysisData: data.data,
+              rawRequirements: data.rawRequirements,
+            } 
+          });
+        }, 500);
+
+      } catch (error) {
+        clearInterval(progressInterval);
+        console.error('Error analyzing repo:', error);
+        toast({
+          title: "Analysis Failed",
+          description: error instanceof Error ? error.message : "Could not analyze repository",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate("/"), 2000);
+      }
+    };
+
+    analyzeRepo();
+  }, [navigate, location]);
 
   return (
     <main className="min-h-screen bg-background flex flex-col">
