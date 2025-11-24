@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      shared_results: {
+        Row: {
+          analysis_data: Json
+          created_at: string
+          expires_at: string | null
+          id: string
+          repository_url: string
+          share_token: string
+          view_count: number
+        }
+        Insert: {
+          analysis_data: Json
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          repository_url: string
+          share_token: string
+          view_count?: number
+        }
+        Update: {
+          analysis_data?: Json
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          repository_url?: string
+          share_token?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

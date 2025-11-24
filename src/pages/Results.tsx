@@ -1,7 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Wand2, Download, Loader2 } from "lucide-react";
+import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Wand2, Download, Loader2, Share2, FileDown, BookOpen, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ResultsSkeleton from "@/components/ResultsSkeleton";
@@ -13,6 +27,9 @@ const Results = () => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingFix, setIsGeneratingFix] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -29,6 +46,7 @@ const Results = () => {
   const foundFiles = location.state?.foundFiles || [];
   const pythonVersion = location.state?.pythonVersion;
   const pythonVersionSource = location.state?.pythonVersionSource;
+  const repositoryUrl = location.state?.repositoryUrl || "";
 
   // Redirect if no data
   useEffect(() => {
@@ -123,6 +141,133 @@ const Results = () => {
     } finally {
       setIsGeneratingFix(false);
     }
+  };
+
+  const handleShare = async () => {
+    setIsSharing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-share', {
+        body: {
+          analysisData: {
+            issues,
+            suggestions,
+            dependencyDiff,
+            detectedFormats,
+            foundFiles,
+            pythonVersion,
+            reproducibilityScore: analysisData.reproducibilityScore,
+          },
+          repositoryUrl,
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        throw new Error('Failed to create share link');
+      }
+
+      setShareUrl(data.shareUrl);
+      toast({
+        title: "Share link created!",
+        description: "Your results are now shareable.",
+      });
+    } catch (error) {
+      console.error('Error creating share:', error);
+      toast({
+        title: "Failed to create share link",
+        description: error instanceof Error ? error.message : "Could not create share link",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({
+      title: "Link copied!",
+      description: "Share link copied to clipboard.",
+    });
+  };
+
+  const exportAsJSON = () => {
+    const exportData = {
+      repository: repositoryUrl,
+      analysisDate: new Date().toISOString(),
+      pythonVersion,
+      detectedFormats,
+      issues,
+      suggestions,
+      dependencyDiff,
+      reproducibilityScore: analysisData.reproducibilityScore,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fixenv-analysis.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exported as JSON",
+      description: "Analysis exported successfully.",
+    });
+  };
+
+  const exportAsMarkdown = () => {
+    let markdown = `# FixEnv Analysis Report\n\n`;
+    markdown += `**Repository:** ${repositoryUrl}\n`;
+    markdown += `**Analysis Date:** ${new Date().toLocaleDateString()}\n`;
+    markdown += `**Python Version:** ${pythonVersion || 'Not detected'}\n`;
+    markdown += `**Reproducibility Score:** ${analysisData.reproducibilityScore || 'N/A'}\n\n`;
+    
+    markdown += `## Detected Formats\n\n`;
+    foundFiles.forEach((file: any) => {
+      markdown += `- ${file.format}\n`;
+    });
+    
+    markdown += `\n## Issues Found (${issues.length})\n\n`;
+    issues.forEach((issue: any, i: number) => {
+      markdown += `### ${i + 1}. ${issue.title}\n`;
+      markdown += `**Package:** \`${issue.package}\`\n`;
+      markdown += `**Severity:** ${issue.severity}\n`;
+      markdown += `**Description:** ${issue.description}\n\n`;
+    });
+    
+    markdown += `## AI Suggestions\n\n`;
+    suggestions.forEach((suggestion: string, i: number) => {
+      markdown += `${i + 1}. ${suggestion}\n`;
+    });
+    
+    markdown += `\n## Dependency Changes\n\n`;
+    markdown += `| Package | Before | After |\n`;
+    markdown += `|---------|--------|-------|\n`;
+    dependencyDiff.forEach((dep: any) => {
+      markdown += `| ${dep.package} | ${dep.before} | ${dep.after} |\n`;
+    });
+
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fixenv-analysis.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exported as Markdown",
+      description: "Analysis exported successfully.",
+    });
   };
 
   return (
@@ -297,6 +442,73 @@ const Results = () => {
                 </>
               )}
             </Button>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  onClick={shareUrl ? undefined : handleShare}
+                  disabled={isSharing}
+                  size="lg"
+                  variant="outline"
+                  className="h-14 px-8 font-semibold gap-2 text-base"
+                >
+                  {isSharing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Creating Link...
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-5 h-5" />
+                      Share Results
+                    </>
+                  )}
+                </Button>
+              </DialogTrigger>
+              {shareUrl && (
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Share Your Analysis</DialogTitle>
+                    <DialogDescription>
+                      Anyone with this link can view your analysis results.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex items-center gap-2 mt-4">
+                    <input
+                      type="text"
+                      value={shareUrl}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-codeBg border border-border rounded text-sm code-font"
+                    />
+                    <Button onClick={handleCopyLink} size="sm">
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </DialogContent>
+              )}
+            </Dialog>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-14 px-8 font-semibold gap-2 text-base"
+                >
+                  <FileDown className="w-5 h-5" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={exportAsJSON}>
+                  Export as JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAsMarkdown}>
+                  Export as Markdown
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               onClick={() => navigate("/snapshot", { 
                 state: { 
@@ -313,6 +525,65 @@ const Results = () => {
               <Sparkles className="w-5 h-5" />
               Generate Snapshot
             </Button>
+          </div>
+
+          {/* CI Integration Guide */}
+          <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in mt-8" style={{ animationDelay: '500ms' }}>
+            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-primary" />
+              Using FixEnv in CI/CD
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              Integrate FixEnv into your continuous integration workflow to automatically check dependency health on every push.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">GitHub Actions Example</h3>
+                <pre className="bg-codeBg border border-border rounded-lg p-4 overflow-x-auto text-sm code-font">
+{`name: FixEnv Check
+
+on: [push, pull_request]
+
+jobs:
+  fixenv-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run FixEnv Analysis
+        run: |
+          curl -X POST https://ncafkcmxumkklboonfhs.supabase.co/functions/v1/analyze-repo \\
+            -H "Content-Type: application/json" \\
+            -d '{"repoUrl": "https://github.com/your-org/your-repo"}'
+      
+      - name: Check Results
+        run: echo "Analysis complete. Review results at FixEnv."`}
+                </pre>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Best Practices</h3>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Run FixEnv checks on every pull request to catch dependency issues early</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Set up notifications for high-severity issues to your team's Slack/Discord</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Use the auto-fix feature to generate corrected dependency files automatically</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Export results as JSON for integration with other monitoring tools</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
         )}

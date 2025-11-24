@@ -70,6 +70,7 @@ const Scanning = () => {
               foundFiles: data.foundFiles || [],
               pythonVersion: data.pythonVersion,
               pythonVersionSource: data.pythonVersionSource,
+              repositoryUrl: repoUrl,
             } 
           });
         }, 500);
