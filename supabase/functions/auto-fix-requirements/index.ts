@@ -1,0 +1,183 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { issues, suggestions, dependencyDiff, detectedFormats, primaryFormat, pythonVersion } = await req.json();
+    console.log('Auto-fix request received');
+    console.log('Primary format:', primaryFormat);
+    console.log('Python version:', pythonVersion);
+
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
+    }
+
+    // Determine the output format and filename
+    let outputFormat = 'requirements.txt';
+    let fileExtension = 'txt';
+    
+    if (primaryFormat?.includes('Poetry') || primaryFormat?.includes('pyproject.toml')) {
+      outputFormat = 'pyproject.toml';
+      fileExtension = 'toml';
+    } else if (primaryFormat?.includes('Pipenv') || primaryFormat?.includes('Pipfile')) {
+      outputFormat = 'Pipfile';
+      fileExtension = 'pipfile';
+    }
+
+    console.log('Generating fixed file in format:', outputFormat);
+
+    // Build the AI prompt with all the context
+    const issuesSummary = issues.map((issue: any) => 
+      `- ${issue.title} (${issue.package}): ${issue.description}`
+    ).join('\n');
+
+    const suggestionsText = suggestions.join('\n- ');
+
+    const dependenciesText = dependencyDiff.map((dep: any) => 
+      `${dep.package}: ${dep.before} → ${dep.after}`
+    ).join('\n');
+
+    const pythonVersionText = pythonVersion && pythonVersion !== 'unknown' 
+      ? `\n\nTARGET PYTHON VERSION: ${pythonVersion}\nEnsure all packages are compatible with Python ${pythonVersion}.`
+      : '';
+
+    const aiPrompt = `You are a Python dependency expert. Generate a corrected dependency file that fixes all the issues found in the analysis.
+
+OUTPUT FORMAT: ${outputFormat}
+${pythonVersionText}
+
+DETECTED ISSUES:
+${issuesSummary}
+
+AI SUGGESTIONS:
+- ${suggestionsText}
+
+DEPENDENCY CORRECTIONS:
+${dependenciesText}
+
+INSTRUCTIONS:
+1. Generate a complete, production-ready ${outputFormat} file
+2. Use the "after" versions from the dependency corrections
+3. Add comments explaining major changes
+4. Include all dependencies with proper version pins
+5. Ensure compatibility with Python ${pythonVersion || 'latest stable'}
+6. Follow ${outputFormat} best practices and syntax
+
+${outputFormat === 'pyproject.toml' ? `
+For Poetry projects, use this structure:
+[tool.poetry]
+name = "project"
+version = "0.1.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = "${pythonVersion && pythonVersion !== 'unknown' ? pythonVersion : '^3.11'}"
+# Add all dependencies here with proper version constraints
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+` : ''}
+
+${outputFormat === 'Pipfile' ? `
+For Pipenv projects, use this structure:
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+# Add all dependencies here
+
+[dev-packages]
+
+[requires]
+python_version = "${pythonVersion && pythonVersion !== 'unknown' ? pythonVersion.split('.').slice(0, 2).join('.') : '3.11'}"
+` : ''}
+
+CRITICAL: Respond with ONLY the file content. No explanations, no markdown code blocks, just the raw file content that can be saved directly.`;
+
+    console.log('Calling Lovable AI to generate fixed file...');
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a Python dependency expert. Generate corrected dependency files without any markdown formatting or explanations.' 
+          },
+          { role: 'user', content: aiPrompt }
+        ],
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: 'Rate limit exceeded. Please try again in a moment.' 
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: 'Payment required. Please add credits to your Lovable workspace.' 
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const errorText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errorText);
+      throw new Error(`AI generation failed: ${aiResponse.status}`);
+    }
+
+    const aiData = await aiResponse.json();
+    console.log('AI response received');
+    
+    let content = aiData.choices[0].message.content;
+    
+    // Clean up any markdown formatting
+    content = content.replace(/```[a-z]*\n?/gi, '').trim();
+    
+    console.log('Generated file preview:', content.substring(0, 200));
+
+    return new Response(JSON.stringify({
+      success: true,
+      fixedContent: content,
+      filename: outputFormat,
+      format: outputFormat,
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in auto-fix-requirements:', error);
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
