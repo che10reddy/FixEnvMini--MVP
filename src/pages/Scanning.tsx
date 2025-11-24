@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 
 const steps = [
   "Fetching repository",
-  "Reading requirements.txt",
+  "Detecting dependency files",
   "Parsing dependencies",
   "Checking for version conflicts",
   "Sending data to AI Analyzer",
@@ -66,6 +66,8 @@ const Scanning = () => {
             state: { 
               analysisData: data.data,
               rawRequirements: data.rawRequirements,
+              detectedFormats: data.detectedFormats || [],
+              foundFiles: data.foundFiles || [],
             } 
           });
         }, 500);

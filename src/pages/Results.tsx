@@ -23,6 +23,8 @@ const Results = () => {
   // Get analysis data from navigation state
   const analysisData = location.state?.analysisData;
   const rawRequirements = location.state?.rawRequirements;
+  const detectedFormats = location.state?.detectedFormats || [];
+  const foundFiles = location.state?.foundFiles || [];
 
   // Redirect if no data
   useEffect(() => {
@@ -90,6 +92,22 @@ const Results = () => {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Here's what we found in your Python project's environment.
             </p>
+            
+            {/* Detected Formats Badges */}
+            {foundFiles.length > 0 && (
+              <div className="flex items-center justify-center gap-2 flex-wrap pt-2">
+                <span className="text-sm text-muted-foreground">Detected:</span>
+                {foundFiles.map((file: any, index: number) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    {file.format}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Issues Summary Card */}
