@@ -189,8 +189,10 @@ const Results = () => {
             <Button
               onClick={() => navigate("/snapshot", { 
                 state: { 
-                  dependencyDiff, 
+                  dependencyDiff,
                   reproducibilityScore: analysisData.reproducibilityScore,
+                  issues,
+                  suggestions,
                 } 
               })}
               size="lg"
