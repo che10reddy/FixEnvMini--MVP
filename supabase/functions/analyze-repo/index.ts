@@ -57,10 +57,9 @@ serve(async (req) => {
 
     const aiPrompt = `You are a Python dependency expert. Analyze this requirements.txt file and provide:
 
-1. Issues found (missing version pins, conflicts, outdated packages)
+1. Issues found (missing version pins, conflicts, outdated packages) - IMPORTANT: Categorize each issue
 2. AI fix suggestions (specific version recommendations)
 3. Dependency diff (before and after versions)
-4. A reproducibility score (0-100) based on how well the environment is configured
 
 Requirements.txt content:
 \`\`\`
@@ -76,6 +75,7 @@ Use this exact structure:
       "title": "Issue title",
       "package": "package-name",
       "severity": "high|medium|low",
+      "category": "missing_pin|conflict|outdated",
       "description": "Detailed description"
     }
   ],
@@ -88,9 +88,13 @@ Use this exact structure:
       "before": "detected version or 'unversioned'",
       "after": "suggested version"
     }
-  ],
-  "reproducibilityScore": 85
-}`;
+  ]
+}
+
+IMPORTANT: Categorize issues correctly:
+- "missing_pin": When a package has no version specified
+- "conflict": When package versions conflict with each other
+- "outdated": When a package has an old version available`;
 
     console.log('Calling AI for analysis...');
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -131,6 +135,53 @@ Use this exact structure:
     console.log('Cleaned content:', content.substring(0, 100));
     
     const analysisResult = JSON.parse(content);
+
+    // Calculate reproducibility score using weighted algorithm
+    let score = 50; // Base score
+    
+    // 1. Version Pinning (0-30 points)
+    const unpinnedPackages = analysisResult.dependencyDiff.filter((dep: any) => 
+      dep.before === "unversioned"
+    );
+    const totalPackages = analysisResult.dependencyDiff.length;
+    
+    if (totalPackages > 0) {
+      const pinnedPercentage = ((totalPackages - unpinnedPackages.length) / totalPackages) * 100;
+      score += Math.round((pinnedPercentage / 100) * 30);
+    }
+    
+    // 2. Conflicts (0-25 points)
+    const conflicts = analysisResult.issues.filter((issue: any) => 
+      issue.category === "conflict" || issue.severity === "high"
+    );
+    
+    if (conflicts.length === 0) {
+      score += 25;
+    } else if (conflicts.length <= 2) {
+      score += 15;
+    } else if (conflicts.length <= 5) {
+      score += 5;
+    }
+    
+    // 3. Package Health (0-15 points)
+    const outdated = analysisResult.issues.filter((issue: any) => 
+      issue.category === "outdated"
+    );
+    
+    if (outdated.length === 0) {
+      score += 15;
+    } else if (outdated.length <= 3) {
+      score += 10;
+    } else if (outdated.length <= 6) {
+      score += 5;
+    }
+    
+    // Cap at 100
+    score = Math.min(score, 100);
+    
+    analysisResult.reproducibilityScore = score;
+    
+    console.log(`Calculated reproducibility score: ${score}`);
 
     return new Response(JSON.stringify({
       success: true,
