@@ -101,6 +101,7 @@ const Results = () => {
           detectedFormats,
           primaryFormat: location.state?.primaryFormat,
           pythonVersion,
+          rawRequirements,
         }
       });
 
