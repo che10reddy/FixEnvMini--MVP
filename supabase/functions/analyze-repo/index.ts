@@ -55,18 +55,61 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const aiPrompt = `You are a Python dependency expert. Analyze this requirements.txt file and provide:
+    const aiPrompt = `You are an expert Python dependency analyst. Analyze this requirements.txt file using your knowledge of common dependency issues.
 
-1. Issues found (missing version pins, conflicts, outdated packages) - IMPORTANT: Categorize each issue
-2. AI fix suggestions (specific version recommendations)
-3. Dependency diff (before and after versions)
+KNOWN PATTERNS TO DETECT:
 
-Requirements.txt content:
+1. Missing Version Pins: Unpinned packages (e.g., numpy with no version) cause version drift
+2. Python Compatibility:
+   - pandas <1.5 incompatible with Python 3.11+
+   - TensorFlow 2.3 only supports Python 3.6-3.8
+   - Django 2.2 incompatible with Python 3.10+
+   - matplotlib 3.1.0 requires Python <3.11
+3. CUDA Mismatches: torch 2.1.0 requires CUDA 12.1 (not 11.7), torch 1.13.1+cu117 for CUDA 11.7
+4. Breaking Upgrades:
+   - SQLAlchemy 2.0 breaks Flask-SQLAlchemy <3
+   - Pydantic 2.0 breaks FastAPI <0.100
+   - jinja2 2.x incompatible with Flask 2.2+
+5. Conflicting Versions:
+   - scipy 1.5.x incompatible with numpy 1.26.x
+   - protobuf 4.x breaks TensorFlow 2.4 (needs 3.20.x)
+6. Deprecated Packages: sklearn → scikit-learn
+7. Missing Dependencies: Check for commonly imported but unlisted packages (requests, pytest)
+8. Duplicate Packages: Same package listed twice with different versions
+9. Platform Issues: CuPy CUDA wheels unavailable on Windows, faiss-cpu <1.7.4 needs compilers
+10. Indirect Conflicts: transformers 4.33+ requires tokenizers 0.14+
+11. Wrong Build Types: GPU builds (torch+cu118) on CPU systems
+12. Typos: Common misspellings (numpi → numpy)
+
+FEW-SHOT EXAMPLES:
+
+Example 1 - Missing Pin:
+Input: "numpy\npandas==1.3.0"
+Output Issue: {"title": "Missing version pin for numpy", "package": "numpy", "severity": "high", "category": "missing_pin", "description": "Unpinned numpy leads to version drift and potential incompatibility with pandas==1.3.0"}
+Output Suggestion: "Pin numpy to a compatible version: numpy==1.21.6"
+
+Example 2 - Python Compatibility:
+Input: "pandas==1.2.4" (Python 3.11)
+Output Issue: {"title": "pandas incompatible with Python 3.11", "package": "pandas", "severity": "high", "category": "conflict", "description": "pandas <1.5 does not support Python 3.11"}
+Output Suggestion: "Upgrade to pandas==2.1.0 for Python 3.11 compatibility"
+
+Example 3 - Conflicting Versions:
+Input: "numpy==1.26.0\nscipy==1.5.4"
+Output Issue: {"title": "scipy incompatible with numpy 1.26.x", "package": "scipy", "severity": "high", "category": "conflict", "description": "scipy 1.5.x cannot work with numpy 1.26.x"}
+Output Suggestion: "Upgrade scipy to 1.10.1 or downgrade numpy to 1.23.5"
+
+Example 4 - Deprecated Package:
+Input: "sklearn==0.0"
+Output Issue: {"title": "Deprecated package 'sklearn'", "package": "sklearn", "severity": "medium", "category": "outdated", "description": "sklearn is a deprecated meta-package, use scikit-learn instead"}
+Output Suggestion: "Replace with scikit-learn==1.3.0"
+
+NOW ANALYZE THIS REQUIREMENTS.TXT:
+
 \`\`\`
 ${requirementsContent}
 \`\`\`
 
-CRITICAL: Respond ONLY with a valid JSON object. Do not include markdown code blocks, explanatory text, or any formatting. Return raw JSON only.
+CRITICAL: Respond ONLY with a valid JSON object. No markdown, no explanatory text, raw JSON only.
 
 Use this exact structure:
 {
@@ -91,10 +134,10 @@ Use this exact structure:
   ]
 }
 
-IMPORTANT: Categorize issues correctly:
-- "missing_pin": When a package has no version specified
-- "conflict": When package versions conflict with each other
-- "outdated": When a package has an old version available`;
+CATEGORY RULES:
+- "missing_pin": Package has no version specified
+- "conflict": Package versions conflict with each other or with Python version
+- "outdated": Package has an old version that should be upgraded`;
 
     console.log('Calling AI for analysis...');
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
