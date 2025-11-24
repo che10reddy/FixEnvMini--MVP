@@ -7,6 +7,69 @@ const ReproducibilityScore = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const score = location.state?.reproducibilityScore || 94;
+  const issues = location.state?.issues || [];
+  const dependencyDiff = location.state?.dependencyDiff || [];
+  
+  // Generate positive and negative points from actual data
+  const generatePoints = () => {
+    const positive: string[] = [];
+    const negative: string[] = [];
+    
+    // Count pinned vs unpinned packages
+    const unpinnedPackages = dependencyDiff.filter((dep: any) => 
+      dep.before === "unversioned"
+    );
+    const pinnedPackages = dependencyDiff.filter((dep: any) => 
+      dep.before !== "unversioned"
+    );
+    
+    if (unpinnedPackages.length === 0 && dependencyDiff.length > 0) {
+      positive.push("All packages have version pins");
+    } else if (pinnedPackages.length > 0) {
+      positive.push(`${pinnedPackages.length} package${pinnedPackages.length > 1 ? 's' : ''} properly pinned`);
+    }
+    
+    if (unpinnedPackages.length > 0) {
+      negative.push(`${unpinnedPackages.length} package${unpinnedPackages.length > 1 ? 's' : ''} missing version pins`);
+    }
+    
+    // Check for conflicts
+    const conflicts = issues.filter((issue: any) => 
+      issue.severity === "high" && 
+      (issue.title.toLowerCase().includes("conflict") || 
+       issue.description.toLowerCase().includes("conflict"))
+    );
+    
+    if (conflicts.length === 0 && issues.length > 0) {
+      positive.push("No conflicting dependencies detected");
+    } else if (conflicts.length > 0) {
+      negative.push(`${conflicts.length} dependency conflict${conflicts.length > 1 ? 's' : ''} found`);
+    }
+    
+    // Check for outdated packages
+    const outdated = issues.filter((issue: any) => 
+      issue.title.toLowerCase().includes("outdated")
+    );
+    
+    if (outdated.length === 0 && issues.length > 0) {
+      positive.push("All packages are up-to-date");
+    } else if (outdated.length > 0) {
+      negative.push(`${outdated.length} outdated package${outdated.length > 1 ? 's' : ''} detected`);
+    }
+    
+    // Additional checks
+    if (dependencyDiff.length > 0) {
+      positive.push("Dependencies are properly documented");
+    }
+    
+    if (issues.filter((i: any) => i.severity === "low").length > 0) {
+      negative.push("Minor reproducibility risks present");
+    }
+    
+    return { positive, negative };
+  };
+  
+  const { positive: positivePoints, negative: negativePoints } = generatePoints();
   
   // Color logic based on score
   const getScoreColor = (score: number) => {
@@ -29,17 +92,6 @@ const ReproducibilityScore = () => {
 
   const circumference = 2 * Math.PI * 90;
   const strokeDashoffset = circumference - (score / 100) * circumference;
-
-  const positivePoints = [
-    "All core dependencies pinned",
-    "Compatible version ranges",
-    "No conflicting packages"
-  ];
-
-  const negativePoints = [
-    "2 minor dependencies missing version pins",
-    "1 package slightly outdated"
-  ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

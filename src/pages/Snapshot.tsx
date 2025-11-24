@@ -143,7 +143,12 @@ const Snapshot = () => {
             </Button>
             <Button 
               onClick={() => navigate("/reproducibility", {
-                state: { reproducibilityScore: location.state?.reproducibilityScore }
+                state: { 
+                  reproducibilityScore: location.state?.reproducibilityScore,
+                  issues: location.state?.issues,
+                  suggestions: location.state?.suggestions,
+                  dependencyDiff: location.state?.dependencyDiff,
+                }
               })}
               size="lg"
               className="h-14 px-8 bg-primary hover:bg-primary text-primary-foreground font-semibold gap-2 transition-all hover:shadow-[0_0_30px_rgba(76,201,240,0.6)] text-base"
