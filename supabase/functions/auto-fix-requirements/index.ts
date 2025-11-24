@@ -12,10 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    const { issues, suggestions, dependencyDiff, detectedFormats, primaryFormat, pythonVersion } = await req.json();
+    const { issues, suggestions, dependencyDiff, detectedFormats, primaryFormat, pythonVersion, rawRequirements } = await req.json();
     console.log('Auto-fix request received');
     console.log('Primary format:', primaryFormat);
     console.log('Python version:', pythonVersion);
+    console.log('Raw requirements length:', rawRequirements?.length || 0);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -51,10 +52,15 @@ serve(async (req) => {
       ? `\n\nTARGET PYTHON VERSION: ${pythonVersion}\nEnsure all packages are compatible with Python ${pythonVersion}.`
       : '';
 
-    const aiPrompt = `You are a Python dependency expert. Generate a corrected dependency file that fixes all the issues found in the analysis.
+    const originalDependenciesText = rawRequirements 
+      ? `\n\nORIGINAL DEPENDENCIES FILE:\n${rawRequirements}\n\nInclude ALL of these dependencies in your output, applying fixes where needed.`
+      : '';
+
+    const aiPrompt = `You are a Python dependency expert. Generate a COMPLETE, production-ready dependency file with inline comments explaining each fix.
 
 OUTPUT FORMAT: ${outputFormat}
 ${pythonVersionText}
+${originalDependenciesText}
 
 DETECTED ISSUES:
 ${issuesSummary}
@@ -65,16 +71,29 @@ AI SUGGESTIONS:
 DEPENDENCY CORRECTIONS:
 ${dependenciesText}
 
-INSTRUCTIONS:
-1. Generate a complete, production-ready ${outputFormat} file
-2. Use the "after" versions from the dependency corrections
-3. Add comments explaining major changes
-4. Include all dependencies with proper version pins
+CRITICAL INSTRUCTIONS:
+1. Generate a COMPLETE ${outputFormat} file including ALL dependencies (not just the ones with issues)
+2. For EACH dependency, add an inline comment explaining:
+   - If it was fixed: what was wrong and why this version was chosen
+   - If it was unchanged: confirm it's already correct
+3. Use the "after" versions from the dependency corrections
+4. Pin ALL dependencies to specific versions (no unpinned packages)
 5. Ensure compatibility with Python ${pythonVersion || 'latest stable'}
 6. Follow ${outputFormat} best practices and syntax
+7. Add a header comment explaining this is an auto-fixed file
+
+EXAMPLE FORMAT for requirements.txt:
+# Auto-fixed by FixEnv Mini - ${new Date().toISOString().split('T')[0]}
+# Python version: ${pythonVersion || 'latest stable'}
+
+numpy==1.26.2  # Fixed: was unversioned, pinned to latest stable
+pandas==2.1.0  # Fixed: was 1.5.3, upgraded for Python 3.11 compatibility
+requests==2.31.0  # Already correct, no changes needed
 
 ${outputFormat === 'pyproject.toml' ? `
-For Poetry projects, use this structure:
+For Poetry projects, use this structure with inline comments:
+# Auto-fixed by FixEnv Mini - ${new Date().toISOString().split('T')[0]}
+
 [tool.poetry]
 name = "project"
 version = "0.1.0"
@@ -83,7 +102,8 @@ authors = []
 
 [tool.poetry.dependencies]
 python = "${pythonVersion && pythonVersion !== 'unknown' ? pythonVersion : '^3.11'}"
-# Add all dependencies here with proper version constraints
+# Add all dependencies here with inline comments explaining each fix
+# Example: numpy = "^1.26.2"  # Fixed: was unversioned, pinned to latest stable
 
 [build-system]
 requires = ["poetry-core"]
@@ -91,14 +111,17 @@ build-backend = "poetry.core.masonry.api"
 ` : ''}
 
 ${outputFormat === 'Pipfile' ? `
-For Pipenv projects, use this structure:
+For Pipenv projects, use this structure with inline comments:
+# Auto-fixed by FixEnv Mini - ${new Date().toISOString().split('T')[0]}
+
 [[source]]
 url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
 [packages]
-# Add all dependencies here
+# Add all dependencies here with inline comments explaining each fix
+# Example: numpy = "==1.26.2"  # Fixed: was unversioned, pinned to latest stable
 
 [dev-packages]
 
@@ -106,7 +129,7 @@ name = "pypi"
 python_version = "${pythonVersion && pythonVersion !== 'unknown' ? pythonVersion.split('.').slice(0, 2).join('.') : '3.11'}"
 ` : ''}
 
-CRITICAL: Respond with ONLY the file content. No explanations, no markdown code blocks, just the raw file content that can be saved directly.`;
+CRITICAL: Respond with ONLY the complete file content with inline comments. No explanations, no markdown code blocks, just the raw file content that can be saved directly. Include ALL dependencies from the original file plus any fixes.`;
 
     console.log('Calling Lovable AI to generate fixed file...');
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
