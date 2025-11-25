@@ -75,10 +75,53 @@ const Scanning = () => {
     <main className="min-h-screen bg-background flex flex-col">
       <Header />
       <section className="flex items-center justify-center px-4 py-12 pt-24 min-h-screen flex-1">
-        <div className="relative">
-          <ScanningSkeleton />
+        <div className="max-w-3xl w-full text-center space-y-8 animate-fade-in">
+          {/* Hero Section */}
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">
+              Scanning Your Repository…
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Fetching repo data and analyzing your environment configuration.
+            </p>
+          </div>
+
+          {/* Progress Box */}
+          <div className="bg-card/50 border border-border rounded-xl p-8 backdrop-blur-sm space-y-6">
+            <div className="space-y-4">
+              {[
+                "Fetching repository",
+                "Reading requirements.txt",
+                "Parsing dependencies",
+                "Checking for version conflicts",
+                "Sending data to AI Analyzer"
+              ].map((step, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 text-left"
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full border-2 border-primary animate-pulse" />
+                  </div>
+                  <span className="text-foreground">{step}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Loading Bar */}
+            <div className="relative h-2 bg-muted/20 rounded-full overflow-hidden">
+              <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-primary to-accent rounded-full animate-pulse" />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <p className="text-sm text-muted-foreground">
+            This may take a few seconds…
+          </p>
+
+          {/* Timeout Warning */}
           {showTimeoutWarning && (
-            <p className="text-sm text-yellow-500 animate-fade-in text-center mt-6">
+            <p className="text-sm text-yellow-500 animate-fade-in">
               ⏳ Large repository detected. This may take up to a minute...
             </p>
           )}
