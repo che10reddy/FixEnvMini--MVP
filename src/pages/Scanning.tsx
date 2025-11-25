@@ -13,6 +13,7 @@ const steps = [
   "Parsing dependencies",
   "Checking for version conflicts",
   "Sending data to AI Analyzer",
+  "Preparing your results",
 ];
 
 const Scanning = () => {
@@ -47,10 +48,10 @@ const Scanning = () => {
       // Initial loading delay
       setTimeout(() => setIsLoading(false), 1000);
 
-      // Show timeout warning after 20 seconds
+      // Show timeout warning after 15 seconds
       const timeoutWarning = setTimeout(() => {
         setShowTimeoutWarning(true);
-      }, 20000);
+      }, 15000);
 
       try {
         const { data, error } = await supabase.functions.invoke('analyze-repo', {
@@ -172,9 +173,11 @@ const Scanning = () => {
           </div>
 
           {/* Note */}
-          <p className="text-sm text-muted-foreground">
-            This may take a few seconds…
-          </p>
+          {!showTimeoutWarning && (
+            <p className="text-sm text-muted-foreground">
+              This usually takes a few seconds…
+            </p>
+          )}
 
           {/* Timeout Warning */}
           {showTimeoutWarning && (
