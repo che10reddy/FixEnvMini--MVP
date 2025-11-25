@@ -45,22 +45,26 @@ serve(async (req) => {
       { name: 'setup.py', type: 'setuptools', format: 'Setup.py' },
     ];
 
-    const foundFiles: Array<{ name: string; type: string; format: string; content: string }> = [];
-
-    for (const file of fileChecks) {
+    // Fetch all dependency files in parallel
+    console.log('Fetching dependency files in parallel...');
+    const fetchPromises = fileChecks.map(async (file) => {
       try {
         const response = await fetch(
           `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${file.name}`
         );
         if (response.ok) {
           const content = await response.text();
-          foundFiles.push({ name: file.name, type: file.type, format: file.format, content });
           console.log(`✓ Found ${file.name} (${content.length} bytes)`);
+          return { name: file.name, type: file.type, format: file.format, content };
         }
       } catch (error) {
-        // File doesn't exist, continue
+        // File doesn't exist, skip
       }
-    }
+      return null;
+    });
+
+    const results = await Promise.all(fetchPromises);
+    const foundFiles = results.filter((file): file is { name: string; type: string; format: string; content: string } => file !== null);
 
     if (foundFiles.length === 0) {
       throw new Error('No Python dependency files found (requirements.txt, pyproject.toml, Pipfile, or setup.py)');
@@ -72,22 +76,14 @@ serve(async (req) => {
     const detectedFormats = [...new Set(foundFiles.map(f => f.format))];
     const primaryFormat = foundFiles[0].format;
 
-    // Detect Python version from multiple sources
+    // Detect Python version from multiple sources (optimized)
     console.log('Detecting Python version...');
-    const pythonVersionSources = [
-      { name: 'runtime.txt', pattern: /python-(\d+\.\d+\.?\d*)/i },
-      { name: '.python-version', pattern: /(\d+\.\d+\.?\d*)/ },
-      { name: '.github/workflows/ci.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
-      { name: '.github/workflows/main.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
-      { name: '.github/workflows/test.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
-    ];
-
     let detectedPythonVersion = '';
     let pythonVersionSource = '';
 
     // Check pyproject.toml first (already fetched)
     const pyprojectFile = foundFiles.find(f => f.name === 'pyproject.toml');
-    if (pyprojectFile && !detectedPythonVersion) {
+    if (pyprojectFile) {
       const pythonMatch = pyprojectFile.content.match(/python\s*=\s*["']([^"']+)["']/);
       if (pythonMatch) {
         detectedPythonVersion = pythonMatch[1];
@@ -96,26 +92,34 @@ serve(async (req) => {
       }
     }
 
-    // Check other Python version files
-    for (const source of pythonVersionSources) {
-      if (detectedPythonVersion) break;
-      
-      try {
-        const response = await fetch(
-          `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${source.name}`
-        );
-        if (response.ok) {
-          const content = await response.text();
-          const match = content.match(source.pattern);
-          if (match) {
-            detectedPythonVersion = match[1];
-            pythonVersionSource = source.name;
-            console.log(`✓ Found Python version in ${source.name}: ${detectedPythonVersion}`);
-            break;
+    // Only check additional files if not found in pyproject.toml
+    if (!detectedPythonVersion) {
+      const pythonVersionSources = [
+        { name: '.python-version', pattern: /(\d+\.\d+\.?\d*)/ },
+        { name: 'runtime.txt', pattern: /python-(\d+\.\d+\.?\d*)/i },
+        { name: '.github/workflows/ci.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
+        { name: '.github/workflows/main.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
+        { name: '.github/workflows/test.yml', pattern: /python-version:\s*['"]?(\d+\.\d+\.?\d*)['"]?/i },
+      ];
+
+      for (const source of pythonVersionSources) {
+        try {
+          const response = await fetch(
+            `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${source.name}`
+          );
+          if (response.ok) {
+            const content = await response.text();
+            const match = content.match(source.pattern);
+            if (match) {
+              detectedPythonVersion = match[1];
+              pythonVersionSource = source.name;
+              console.log(`✓ Found Python version in ${source.name}: ${detectedPythonVersion}`);
+              break; // Stop immediately after finding first match
+            }
           }
+        } catch (error) {
+          // File doesn't exist, continue
         }
-      } catch (error) {
-        // File doesn't exist, continue
       }
     }
 
