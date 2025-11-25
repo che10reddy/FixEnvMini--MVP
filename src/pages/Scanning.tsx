@@ -18,6 +18,7 @@ const steps = [
 const Scanning = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,12 +47,18 @@ const Scanning = () => {
       // Initial loading delay
       setTimeout(() => setIsLoading(false), 1000);
 
+      // Show timeout warning after 20 seconds
+      const timeoutWarning = setTimeout(() => {
+        setShowTimeoutWarning(true);
+      }, 20000);
+
       try {
         const { data, error } = await supabase.functions.invoke('analyze-repo', {
           body: { repoUrl }
         });
 
         clearInterval(progressInterval);
+        clearTimeout(timeoutWarning);
         setCurrentStep(steps.length);
 
         if (error) throw error;
@@ -77,6 +84,7 @@ const Scanning = () => {
 
       } catch (error) {
         clearInterval(progressInterval);
+        clearTimeout(timeoutWarning);
         console.error('Error analyzing repo:', error);
         toast({
           title: "Analysis Failed",
@@ -167,6 +175,15 @@ const Scanning = () => {
           <p className="text-sm text-muted-foreground">
             This may take a few seconds…
           </p>
+
+          {/* Timeout Warning */}
+          {showTimeoutWarning && (
+            <div className="bg-card/80 border border-primary/30 rounded-lg p-4 backdrop-blur-sm animate-fade-in">
+              <p className="text-sm text-primary font-medium">
+                Large repository detected. This may take up to a minute…
+              </p>
+            </div>
+          )}
           </div>
         )}
       </section>
