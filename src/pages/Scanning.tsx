@@ -8,16 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 const steps = [
-  "Fetching repository",
-  "Detecting dependency files",
-  "Parsing dependencies",
-  "Checking for version conflicts",
-  "Sending data to AI Analyzer",
+  "Fetching files from GitHub",
+  "Analyzing with AI (may take 30-60 seconds)",
 ];
 
 const Scanning = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,23 +33,22 @@ const Scanning = () => {
         return;
       }
 
-      // Show progress through steps
-      const progressInterval = setInterval(() => {
-        setCurrentStep(prev => {
-          if (prev < steps.length) return prev + 1;
-          return prev;
-        });
-      }, 800);
-
-      // Initial loading delay
+      // Show first step immediately
       setTimeout(() => setIsLoading(false), 1000);
+      
+      // Move to AI analysis step after 2 seconds
+      const stepTimeout = setTimeout(() => setCurrentStep(1), 2000);
+      
+      // Show timeout warning after 30 seconds
+      const warningTimeout = setTimeout(() => setShowTimeoutWarning(true), 30000);
 
       try {
         const { data, error } = await supabase.functions.invoke('analyze-repo', {
           body: { repoUrl }
         });
 
-        clearInterval(progressInterval);
+        clearTimeout(stepTimeout);
+        clearTimeout(warningTimeout);
         setCurrentStep(steps.length);
 
         if (error) throw error;
@@ -76,7 +73,8 @@ const Scanning = () => {
         }, 500);
 
       } catch (error) {
-        clearInterval(progressInterval);
+        clearTimeout(stepTimeout);
+        clearTimeout(warningTimeout);
         console.error('Error analyzing repo:', error);
         toast({
           title: "Analysis Failed",
@@ -164,9 +162,16 @@ const Scanning = () => {
           </div>
 
           {/* Note */}
-          <p className="text-sm text-muted-foreground">
-            This may take a few seconds…
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Larger repos may take 30-60 seconds to analyze
+            </p>
+            {showTimeoutWarning && (
+              <p className="text-sm text-yellow-500 animate-fade-in">
+                ⏳ Large repository detected. Analysis may take up to 2 minutes...
+              </p>
+            )}
+          </div>
           </div>
         )}
       </section>
