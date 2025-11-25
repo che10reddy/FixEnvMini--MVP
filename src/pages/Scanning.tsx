@@ -37,10 +37,10 @@ const Scanning = () => {
         return;
       }
 
-      // Show progress through steps
+      // Show progress through steps (stop at step 4, before AI analysis)
       const progressInterval = setInterval(() => {
         setCurrentStep(prev => {
-          if (prev < steps.length) return prev + 1;
+          if (prev < 4) return prev + 1; // Only auto-progress through first 4 steps
           return prev;
         });
       }, 800);
@@ -54,34 +54,42 @@ const Scanning = () => {
       }, 15000);
 
       try {
+        // Advance to step 5 (Sending data to AI Analyzer) before making the call
+        setCurrentStep(4);
+        
         const { data, error } = await supabase.functions.invoke('analyze-repo', {
           body: { repoUrl }
         });
 
         clearInterval(progressInterval);
         clearTimeout(timeoutWarning);
-        setCurrentStep(steps.length);
-
+        
+        // Advance to step 6 (Preparing your results) when edge function returns
+        setCurrentStep(5);
+        
         if (error) throw error;
 
         if (!data.success) {
           throw new Error(data.error || 'Analysis failed');
         }
 
-        // Navigate to results with the analysis data
+        // Complete all steps and navigate to results
         setTimeout(() => {
-          navigate("/results", { 
-            state: { 
-              analysisData: data.data,
-              rawRequirements: data.rawRequirements,
-              detectedFormats: data.detectedFormats || [],
-              foundFiles: data.foundFiles || [],
-              pythonVersion: data.pythonVersion,
-              pythonVersionSource: data.pythonVersionSource,
-              repositoryUrl: repoUrl,
-            } 
-          });
-        }, 500);
+          setCurrentStep(6); // Mark all steps complete
+          setTimeout(() => {
+            navigate("/results", { 
+              state: { 
+                analysisData: data.data,
+                rawRequirements: data.rawRequirements,
+                detectedFormats: data.detectedFormats || [],
+                foundFiles: data.foundFiles || [],
+                pythonVersion: data.pythonVersion,
+                pythonVersionSource: data.pythonVersionSource,
+                repositoryUrl: repoUrl,
+              } 
+            });
+          }, 500);
+        }, 300);
 
       } catch (error) {
         clearInterval(progressInterval);
@@ -166,7 +174,14 @@ const Scanning = () => {
               <div
                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500 ease-out glow-border"
                 style={{
-                  width: `${((currentStep + 1) / steps.length) * 100}%`,
+                  // Realistic progress: 70% for steps 0-4, 85% for step 5, 100% for step 6
+                  width: currentStep < 4 
+                    ? `${((currentStep + 1) / 6) * 70}%`
+                    : currentStep === 4
+                    ? '70%'
+                    : currentStep === 5
+                    ? '85%'
+                    : '100%',
                 }}
               />
             </div>
