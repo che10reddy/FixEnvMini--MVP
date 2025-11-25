@@ -54,9 +54,6 @@ const Scanning = () => {
       }, 15000);
 
       try {
-        // Advance to step 5 (Sending data to AI Analyzer) before making the call
-        setCurrentStep(4);
-        
         const { data, error } = await supabase.functions.invoke('analyze-repo', {
           body: { repoUrl }
         });

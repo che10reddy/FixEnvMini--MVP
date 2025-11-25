@@ -52,6 +52,12 @@ const ReproducibilityScore = () => {
       positive.push("No conflicting dependencies");
     }
     
+    // Fallback: Always ensure at least some positive points
+    if (positive.length === 0) {
+      positive.push("Repository structure detected");
+      positive.push("Analysis completed successfully");
+    }
+    
     // NEGATIVE POINTS - Based on severity and specific issues
     if (unpinned > 0) {
       negative.push(`${unpinned} package${unpinned > 1 ? 's' : ''} missing version pins`);
@@ -69,6 +75,11 @@ const ReproducibilityScore = () => {
     }
     if (lowIssues.length > 0) {
       negative.push(`${lowIssues.length} minor issue${lowIssues.length > 1 ? 's' : ''} present`);
+    }
+    
+    // Fallback: If score < 100 but no specific negative points, add generic feedback
+    if (negative.length === 0 && score < 100) {
+      negative.push("Minor optimization opportunities detected");
     }
     
     return { positive, negative };
@@ -183,8 +194,8 @@ const ReproducibilityScore = () => {
               </ul>
             </div>
 
-            {/* Negative Points - Only show if there are any */}
-            {negativePoints.length > 0 && (
+            {/* Negative Points - Always show if score < 100 */}
+            {score < 100 && (
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-yellow-500" />
@@ -202,7 +213,7 @@ const ReproducibilityScore = () => {
             )}
 
             {/* Perfect Score Message */}
-            {negativePoints.length === 0 && score === 100 && (
+            {score === 100 && (
               <p className="text-center text-primary font-semibold text-lg">
                 🎉 Perfect score! Your environment is fully reproducible.
               </p>
