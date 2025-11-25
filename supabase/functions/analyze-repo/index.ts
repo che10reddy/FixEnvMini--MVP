@@ -45,22 +45,26 @@ serve(async (req) => {
       { name: 'setup.py', type: 'setuptools', format: 'Setup.py' },
     ];
 
-    const foundFiles: Array<{ name: string; type: string; format: string; content: string }> = [];
-
-    for (const file of fileChecks) {
+    // Fetch all dependency files in parallel
+    console.log('Fetching dependency files in parallel...');
+    const filePromises = fileChecks.map(async (file) => {
       try {
         const response = await fetch(
           `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${file.name}`
         );
         if (response.ok) {
           const content = await response.text();
-          foundFiles.push({ name: file.name, type: file.type, format: file.format, content });
           console.log(`✓ Found ${file.name} (${content.length} bytes)`);
+          return { name: file.name, type: file.type, format: file.format, content };
         }
       } catch (error) {
-        // File doesn't exist, continue
+        // File doesn't exist, return null
       }
-    }
+      return null;
+    });
+
+    const fileResults = await Promise.all(filePromises);
+    const foundFiles = fileResults.filter((file): file is { name: string; type: string; format: string; content: string } => file !== null);
 
     if (foundFiles.length === 0) {
       throw new Error('No Python dependency files found (requirements.txt, pyproject.toml, Pipfile, or setup.py)');
@@ -96,26 +100,49 @@ serve(async (req) => {
       }
     }
 
-    // Check other Python version files
-    for (const source of pythonVersionSources) {
-      if (detectedPythonVersion) break;
-      
+    // Check other Python version files with early exit
+    if (!detectedPythonVersion) {
+      // Check .python-version first (most common)
       try {
         const response = await fetch(
-          `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${source.name}`
+          `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/.python-version`
         );
         if (response.ok) {
           const content = await response.text();
-          const match = content.match(source.pattern);
+          const match = content.match(/(\d+\.\d+\.?\d*)/);
           if (match) {
             detectedPythonVersion = match[1];
-            pythonVersionSource = source.name;
-            console.log(`✓ Found Python version in ${source.name}: ${detectedPythonVersion}`);
-            break;
+            pythonVersionSource = '.python-version';
+            console.log(`✓ Found Python version in .python-version: ${detectedPythonVersion}`);
           }
         }
       } catch (error) {
-        // File doesn't exist, continue
+        // File doesn't exist
+      }
+    }
+
+    // If still not found, check other sources
+    if (!detectedPythonVersion) {
+      for (const source of pythonVersionSources) {
+        if (detectedPythonVersion) break;
+        
+        try {
+          const response = await fetch(
+            `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${source.name}`
+          );
+          if (response.ok) {
+            const content = await response.text();
+            const match = content.match(source.pattern);
+            if (match) {
+              detectedPythonVersion = match[1];
+              pythonVersionSource = source.name;
+              console.log(`✓ Found Python version in ${source.name}: ${detectedPythonVersion}`);
+              break;
+            }
+          }
+        } catch (error) {
+          // File doesn't exist, continue
+        }
       }
     }
 
