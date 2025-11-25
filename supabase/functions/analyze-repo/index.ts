@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.84.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +16,11 @@ serve(async (req) => {
     const { repoUrl } = await req.json();
     console.log('Analyzing repo:', repoUrl);
 
+    // Initialize Supabase client for caching
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Extract owner and repo from GitHub URL
     const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!match) {
@@ -23,6 +29,43 @@ serve(async (req) => {
 
     const [, owner, repo] = match;
     const repoName = repo.replace('.git', '');
+
+    // Check cache first - get latest commit SHA for cache key
+    console.log('Checking for cached results...');
+    const commitResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repoName}/commits?per_page=1`
+    );
+    
+    let cacheKey = repoUrl;
+    if (commitResponse.ok) {
+      const commits = await commitResponse.json();
+      if (commits.length > 0) {
+        const latestCommit = commits[0].sha.substring(0, 7);
+        cacheKey = `${repoUrl}-${latestCommit}`;
+        console.log(`Cache key: ${cacheKey}`);
+        
+        // Try to fetch cached result
+        const { data: cachedResult } = await supabase
+          .from('shared_results')
+          .select('analysis_data, created_at')
+          .eq('repository_url', cacheKey)
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // 24 hour TTL
+          .maybeSingle();
+        
+        if (cachedResult) {
+          console.log('✓ Cache hit! Returning cached analysis');
+          return new Response(JSON.stringify({
+            success: true,
+            cached: true,
+            ...cachedResult.analysis_data
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+    }
+    
+    console.log('Cache miss, proceeding with fresh analysis');
 
     // Detect branch (main or master)
     console.log(`Detecting branch for ${owner}/${repoName}...`);
@@ -168,98 +211,32 @@ serve(async (req) => {
       ? `\n\nDETECTED PYTHON VERSION: ${detectedPythonVersion} (from ${pythonVersionSource})\nIMPORTANT: Check all packages for compatibility with Python ${detectedPythonVersion}`
       : '\n\nNOTE: No Python version detected. Provide general compatibility warnings for common Python version issues.';
 
-    const aiPrompt = `You are an expert Python dependency analyst. Analyze the following Python dependency file(s) using your knowledge of common dependency issues.
+    const aiPrompt = `Analyze Python dependencies for reproducibility issues.
 
-DETECTED FILES:
-${foundFiles.map(f => `- ${f.name} (${f.format})`).join('\n')}
+FILES: ${foundFiles.map(f => f.name).join(', ')}
 ${pythonVersionInfo}
 
-KNOWN PATTERNS TO DETECT:
+KEY PATTERNS:
+1. Missing pins: numpy (no version)
+2. Python compatibility: pandas <1.5 breaks on 3.11+, TensorFlow 2.3 needs 3.6-3.8, NumPy <1.22 breaks on 3.11+
+3. Conflicts: scipy 1.5.x + numpy 1.26.x, protobuf 4.x + TensorFlow 2.4
+4. Breaking upgrades: SQLAlchemy 2.0 + Flask-SQLAlchemy <3, Pydantic 2.0 + FastAPI <0.100
+5. Deprecated: sklearn → scikit-learn
+6. CUDA mismatches: torch versions need matching CUDA
 
-1. Missing Version Pins: Unpinned packages (e.g., numpy with no version) cause version drift
-2. Python Compatibility (CRITICAL - Check against detected Python version):
-   - pandas <1.5 incompatible with Python 3.11+
-   - TensorFlow 2.3 only supports Python 3.6-3.8
-   - Django 2.2 incompatible with Python 3.10+
-   - matplotlib 3.1.0 requires Python <3.11
-   - NumPy <1.22 incompatible with Python 3.11+
-   - asyncio compatibility issues with Python <3.7
-   - typing module changes between Python 3.5-3.10
-3. CUDA Mismatches: torch 2.1.0 requires CUDA 12.1 (not 11.7), torch 1.13.1+cu117 for CUDA 11.7
-4. Breaking Upgrades:
-   - SQLAlchemy 2.0 breaks Flask-SQLAlchemy <3
-   - Pydantic 2.0 breaks FastAPI <0.100
-   - jinja2 2.x incompatible with Flask 2.2+
-5. Conflicting Versions:
-   - scipy 1.5.x incompatible with numpy 1.26.x
-   - protobuf 4.x breaks TensorFlow 2.4 (needs 3.20.x)
-6. Deprecated Packages: sklearn → scikit-learn
-7. Missing Dependencies: Check for commonly imported but unlisted packages (requests, pytest)
-8. Duplicate Packages: Same package listed twice with different versions
-9. Platform Issues: CuPy CUDA wheels unavailable on Windows, faiss-cpu <1.7.4 needs compilers
-10. Indirect Conflicts: transformers 4.33+ requires tokenizers 0.14+
-11. Wrong Build Types: GPU builds (torch+cu118) on CPU systems
-12. Typos: Common misspellings (numpi → numpy)
-13. Multi-Format Issues:
-    - Poetry: Check for dev-dependencies that should be in main dependencies
-    - Pipenv: Look for conflicts between Pipfile and Pipfile.lock
-    - Setup.py: Check for missing install_requires or incorrect version constraints
+EXAMPLES:
+1. "numpy\npandas==1.3.0" → Issue: Missing numpy pin (high severity)
+2. "pandas==1.2.4" + Python 3.11 → Issue: Incompatible (upgrade to 2.1.0)
 
-FEW-SHOT EXAMPLES:
-
-Example 1 - Missing Pin:
-Input: "numpy\npandas==1.3.0"
-Output Issue: {"title": "Missing version pin for numpy", "package": "numpy", "severity": "high", "category": "missing_pin", "description": "Unpinned numpy leads to version drift and potential incompatibility with pandas==1.3.0"}
-Output Suggestion: "Pin numpy to a compatible version: numpy==1.21.6"
-
-Example 2 - Python Compatibility:
-Input: "pandas==1.2.4" (Python 3.11)
-Output Issue: {"title": "pandas incompatible with Python 3.11", "package": "pandas", "severity": "high", "category": "conflict", "description": "pandas <1.5 does not support Python 3.11"}
-Output Suggestion: "Upgrade to pandas==2.1.0 for Python 3.11 compatibility"
-
-Example 3 - Conflicting Versions:
-Input: "numpy==1.26.0\nscipy==1.5.4"
-Output Issue: {"title": "scipy incompatible with numpy 1.26.x", "package": "scipy", "severity": "high", "category": "conflict", "description": "scipy 1.5.x cannot work with numpy 1.26.x"}
-Output Suggestion: "Upgrade scipy to 1.10.1 or downgrade numpy to 1.23.5"
-
-Example 4 - Deprecated Package:
-Input: "sklearn==0.0"
-Output Issue: {"title": "Deprecated package 'sklearn'", "package": "sklearn", "severity": "medium", "category": "outdated", "description": "sklearn is a deprecated meta-package, use scikit-learn instead"}
-Output Suggestion: "Replace with scikit-learn==1.3.0"
-
-NOW ANALYZE THESE DEPENDENCY FILES:
-
+FILES:
 ${filesContent}
 
-CRITICAL: Respond ONLY with a valid JSON object. No markdown, no explanatory text, raw JSON only.
-
-Use this exact structure:
+Return valid JSON only:
 {
-  "issues": [
-    {
-      "title": "Issue title",
-      "package": "package-name",
-      "severity": "high|medium|low",
-      "category": "missing_pin|conflict|outdated",
-      "description": "Detailed description"
-    }
-  ],
-  "suggestions": [
-    "Specific actionable suggestion as a string"
-  ],
-  "dependencyDiff": [
-    {
-      "package": "package-name",
-      "before": "detected version or 'unversioned'",
-      "after": "suggested version"
-    }
-  ]
-}
-
-CATEGORY RULES:
-- "missing_pin": Package has no version specified
-- "conflict": Package versions conflict with each other or with Python version
-- "outdated": Package has an old version that should be upgraded`;
+  "issues": [{"title": "", "package": "", "severity": "high|medium|low", "category": "missing_pin|conflict|outdated", "description": ""}],
+  "suggestions": [""],
+  "dependencyDiff": [{"package": "", "before": "", "after": ""}]
+}`;
 
     console.log('Calling AI for analysis...');
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -348,15 +325,32 @@ CATEGORY RULES:
     
     console.log(`Calculated reproducibility score: ${score}`);
 
-    return new Response(JSON.stringify({
-      success: true,
+    // Store result in cache for 24 hours
+    const resultData = {
       data: analysisResult,
       detectedFormats: detectedFormats,
       primaryFormat: primaryFormat,
       pythonVersion: detectedPythonVersion,
       pythonVersionSource: pythonVersionSource,
       foundFiles: foundFiles.map(f => ({ name: f.name, format: f.format })),
-      rawRequirements: foundFiles[0].content, // Keep for backward compatibility
+      rawRequirements: foundFiles[0].content,
+    };
+
+    try {
+      await supabase.from('shared_results').insert({
+        repository_url: cacheKey,
+        share_token: `cache-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        analysis_data: resultData,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      });
+      console.log('✓ Result cached successfully');
+    } catch (cacheError) {
+      console.error('Cache storage failed (non-critical):', cacheError);
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      ...resultData,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

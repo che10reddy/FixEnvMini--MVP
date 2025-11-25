@@ -13,6 +13,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ResultsSkeleton from "@/components/ResultsSkeleton";
+import { SnapshotProgressDialog } from "@/components/SnapshotProgressDialog";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -92,20 +93,6 @@ const Results = () => {
 
   const handleGenerateSnapshot = async () => {
     setIsGeneratingSnapshot(true);
-    
-    // Show initial progress toast
-    toast({
-      title: "Generating snapshot...",
-      description: "This usually takes 20-40 seconds",
-    });
-
-    // Show extended time warning after 20 seconds
-    const timeoutWarning = setTimeout(() => {
-      toast({
-        title: "Complex analysis detected",
-        description: "This may take up to a minute...",
-      });
-    }, 20000);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-snapshot', {
@@ -121,8 +108,6 @@ const Results = () => {
           reproducibilityScore: analysisData.reproducibilityScore,
         }
       });
-
-      clearTimeout(timeoutWarning);
 
       if (error) throw error;
 
@@ -150,7 +135,6 @@ const Results = () => {
         description: "Review your environment snapshot.",
       });
     } catch (error) {
-      clearTimeout(timeoutWarning);
       console.error('Error generating snapshot:', error);
       toast({
         title: "Failed to generate snapshot",
@@ -227,6 +211,7 @@ const Results = () => {
   return (
     <main className="min-h-screen bg-background flex flex-col">
       <Header />
+      <SnapshotProgressDialog isOpen={isGeneratingSnapshot} />
       <section className="px-4 py-12 pt-24 pb-20 flex-1">
         {isLoading ? (
           <ResultsSkeleton />
