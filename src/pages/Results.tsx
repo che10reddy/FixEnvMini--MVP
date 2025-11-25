@@ -92,6 +92,21 @@ const Results = () => {
 
   const handleGenerateSnapshot = async () => {
     setIsGeneratingSnapshot(true);
+    
+    // Show initial progress toast
+    toast({
+      title: "Generating snapshot...",
+      description: "This usually takes 20-40 seconds",
+    });
+
+    // Show extended time warning after 20 seconds
+    const timeoutWarning = setTimeout(() => {
+      toast({
+        title: "Complex analysis detected",
+        description: "This may take up to a minute...",
+      });
+    }, 20000);
+
     try {
       const { data, error } = await supabase.functions.invoke('generate-snapshot', {
         body: {
@@ -106,6 +121,8 @@ const Results = () => {
           reproducibilityScore: analysisData.reproducibilityScore,
         }
       });
+
+      clearTimeout(timeoutWarning);
 
       if (error) throw error;
 
@@ -133,6 +150,7 @@ const Results = () => {
         description: "Review your environment snapshot.",
       });
     } catch (error) {
+      clearTimeout(timeoutWarning);
       console.error('Error generating snapshot:', error);
       toast({
         title: "Failed to generate snapshot",
