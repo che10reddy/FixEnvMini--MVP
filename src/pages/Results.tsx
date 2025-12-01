@@ -17,6 +17,25 @@ import { SnapshotProgressDialog } from "@/components/SnapshotProgressDialog";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+const GITHUB_ACTIONS_YAML = `name: FixEnv Check
+
+on: [push, pull_request]
+
+jobs:
+  fixenv-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run FixEnv Analysis
+        run: |
+          curl -X POST https://ncafkcmxumkklboonfhs.supabase.co/functions/v1/analyze-repo \\
+            -H "Content-Type: application/json" \\
+            -d '{"repoUrl": "\${{ github.server_url }}/\${{ github.repository }}"}'
+      
+      - name: Check Results
+        run: echo "Analysis complete. Review results at FixEnv."`;
+
 const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,6 +44,13 @@ const Results = () => {
   const [isSharing, setIsSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [yamlCopied, setYamlCopied] = useState(false);
+
+  const handleCopyYaml = () => {
+    navigator.clipboard.writeText(GITHUB_ACTIONS_YAML);
+    setYamlCopied(true);
+    setTimeout(() => setYamlCopied(false), 2000);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -501,26 +527,29 @@ const Results = () => {
             
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-foreground mb-2">GitHub Actions Example</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-foreground">GitHub Actions Example</h3>
+                  <Button
+                    onClick={handleCopyYaml}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 h-8"
+                  >
+                    {yamlCopied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy YAML
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <pre className="bg-codeBg border border-border rounded-lg p-4 overflow-x-auto text-sm code-font">
-{`name: FixEnv Check
-
-on: [push, pull_request]
-
-jobs:
-  fixenv-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Run FixEnv Analysis
-        run: |
-          curl -X POST https://ncafkcmxumkklboonfhs.supabase.co/functions/v1/analyze-repo \\
-            -H "Content-Type: application/json" \\
-            -d '{"repoUrl": "https://github.com/your-org/your-repo"}'
-      
-      - name: Check Results
-        run: echo "Analysis complete. Review results at FixEnv."`}
+                  {GITHUB_ACTIONS_YAML}
                 </pre>
               </div>
 
