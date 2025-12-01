@@ -7,6 +7,83 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Check vulnerabilities using OSV.dev API (free, no API key required)
+async function checkVulnerabilities(packages: { name: string; version: string }[]) {
+  const packagesWithVersions = packages.filter(p => p.version && p.version !== 'unversioned' && p.version !== 'unknown');
+  
+  if (packagesWithVersions.length === 0) {
+    console.log('No packages with versions to check for vulnerabilities');
+    return [];
+  }
+
+  console.log(`Checking ${packagesWithVersions.length} packages for vulnerabilities via OSV.dev...`);
+
+  const queries = packagesWithVersions.map(p => ({
+    package: { name: p.name.toLowerCase(), ecosystem: 'PyPI' },
+    version: p.version.replace(/[<>=!~^]/g, '').trim()
+  }));
+
+  try {
+    const response = await fetch('https://api.osv.dev/v1/querybatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ queries })
+    });
+
+    if (!response.ok) {
+      console.error('OSV API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const vulnerabilities: any[] = [];
+
+    data.results?.forEach((result: any, index: number) => {
+      if (result.vulns && result.vulns.length > 0) {
+        const pkg = packagesWithVersions[index];
+        result.vulns.forEach((vuln: any) => {
+          // Determine severity from database_specific or severity array
+          let severity = 'UNKNOWN';
+          if (vuln.database_specific?.severity) {
+            severity = vuln.database_specific.severity;
+          } else if (vuln.severity && vuln.severity.length > 0) {
+            severity = vuln.severity[0].type === 'CVSS_V3' ? 
+              getCVSSSeverity(vuln.severity[0].score) : 
+              vuln.severity[0].score || 'UNKNOWN';
+          }
+
+          vulnerabilities.push({
+            id: vuln.id,
+            package: pkg.name,
+            version: pkg.version,
+            severity: severity.toUpperCase(),
+            summary: vuln.summary || vuln.details?.substring(0, 200) || 'No description available',
+            aliases: vuln.aliases || [],
+            fixed_versions: vuln.affected?.[0]?.ranges?.[0]?.events?.find((e: any) => e.fixed)?.fixed || null,
+            published: vuln.published,
+            link: `https://osv.dev/vulnerability/${vuln.id}`
+          });
+        });
+      }
+    });
+
+    console.log(`✓ Found ${vulnerabilities.length} vulnerabilities`);
+    return vulnerabilities;
+  } catch (error) {
+    console.error('Error checking vulnerabilities:', error);
+    return [];
+  }
+}
+
+// Convert CVSS score to severity level
+function getCVSSSeverity(score: number): string {
+  if (score >= 9.0) return 'CRITICAL';
+  if (score >= 7.0) return 'HIGH';
+  if (score >= 4.0) return 'MEDIUM';
+  if (score >= 0.1) return 'LOW';
+  return 'UNKNOWN';
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -278,6 +355,16 @@ Return valid JSON only:
     
     const analysisResult = JSON.parse(content);
 
+    // Extract packages with versions for vulnerability scanning
+    const packagesForVulnCheck = analysisResult.dependencyDiff.map((dep: any) => ({
+      name: dep.package,
+      version: dep.before === 'unversioned' ? dep.after : dep.before
+    }));
+
+    // Check for security vulnerabilities using OSV.dev
+    const vulnerabilities = await checkVulnerabilities(packagesForVulnCheck);
+    analysisResult.vulnerabilities = vulnerabilities;
+
     // Calculate reproducibility score using weighted algorithm
     let score = 50; // Base score
     
@@ -317,13 +404,26 @@ Return valid JSON only:
     } else if (outdated.length <= 6) {
       score += 5;
     }
+
+    // 4. Security (reduce score for vulnerabilities)
+    const criticalVulns = vulnerabilities.filter((v: any) => v.severity === 'CRITICAL').length;
+    const highVulns = vulnerabilities.filter((v: any) => v.severity === 'HIGH').length;
     
-    // Cap at 100
-    score = Math.min(score, 100);
+    if (criticalVulns > 0) {
+      score -= Math.min(criticalVulns * 10, 20);
+    }
+    if (highVulns > 0) {
+      score -= Math.min(highVulns * 5, 10);
+    }
+    
+    // Cap at 100 and floor at 0
+    score = Math.max(0, Math.min(score, 100));
     
     analysisResult.reproducibilityScore = score;
+    analysisResult.vulnerabilityCount = vulnerabilities.length;
     
     console.log(`Calculated reproducibility score: ${score}`);
+    console.log(`Total vulnerabilities found: ${vulnerabilities.length}`);
 
     // Store result in cache for 24 hours
     const resultData = {

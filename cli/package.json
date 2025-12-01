@@ -1,0 +1,35 @@
+{
+  "name": "fixenv-cli",
+  "version": "1.0.0",
+  "description": "CLI tool for FixEnv - Python environment analyzer",
+  "main": "index.js",
+  "bin": {
+    "fixenv": "./index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "python",
+    "dependencies",
+    "environment",
+    "analyzer",
+    "reproducibility",
+    "security",
+    "cve"
+  ],
+  "author": "FixEnv",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/che10reddy/FixEnvMini--MVP"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

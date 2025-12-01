@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertTriangle, Info, AlertCircle, ArrowRight, Eye } from "lucide-react";
+import { AlertTriangle, Info, AlertCircle, ArrowRight, Eye, ShieldAlert, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -78,11 +78,13 @@ const SharedResults = () => {
   const detectedFormats = analysisData.detectedFormats || [];
   const foundFiles = analysisData.foundFiles || [];
   const pythonVersion = analysisData.pythonVersion;
+  const vulnerabilities = analysisData.vulnerabilities || [];
 
   const getSeverityIcon = (severity: string) => {
     const severityLower = severity.toLowerCase();
     switch (severityLower) {
       case "high":
+      case "critical":
         return <AlertTriangle className="w-5 h-5 text-destructive" />;
       case "medium":
         return <AlertCircle className="w-5 h-5 text-yellow-500" />;
@@ -96,11 +98,29 @@ const SharedResults = () => {
   const getSeverityColor = (severity: string) => {
     const severityLower = severity.toLowerCase();
     switch (severityLower) {
+      case "critical":
+        return "bg-red-600/10 text-red-500 border-red-600/20";
       case "high":
         return "bg-destructive/10 text-destructive border-destructive/20";
       case "medium":
         return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
       case "low":
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      default:
+        return "bg-muted/10 text-muted-foreground border-muted/20";
+    }
+  };
+
+  const getVulnSeverityColor = (severity: string) => {
+    const severityUpper = severity.toUpperCase();
+    switch (severityUpper) {
+      case "CRITICAL":
+        return "bg-red-600/10 text-red-500 border-red-600/20";
+      case "HIGH":
+        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+      case "MEDIUM":
+        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+      case "LOW":
         return "bg-blue-500/10 text-blue-500 border-blue-500/20";
       default:
         return "bg-muted/10 text-muted-foreground border-muted/20";
@@ -153,6 +173,12 @@ const SharedResults = () => {
                     Python {pythonVersion}
                   </span>
                 )}
+                {vulnerabilities.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    {vulnerabilities.length} CVE{vulnerabilities.length !== 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -171,95 +197,153 @@ const SharedResults = () => {
             </div>
           )}
 
-          {/* Issues Summary Card */}
-          <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-primary" />
-              Detected Issues
-            </h2>
-            <div className="space-y-4">
-              {issues.map((issue: any, index: number) => (
-                <div
-                  key={index}
-                  className="bg-codeBg border border-border rounded-lg p-4 hover:border-primary/30 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    {getSeverityIcon(issue.severity)}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-semibold text-foreground">{issue.title}</h3>
-                        <code className="code-font text-sm text-primary bg-primary/10 px-2 py-1 rounded">
-                          {issue.package}
-                        </code>
-                        <span
-                          className={`text-xs px-2 py-1 rounded border font-medium ${getSeverityColor(
-                            issue.severity
-                          )}`}
-                        >
-                          {issue.severity}
-                        </span>
+          {/* Security Vulnerabilities Card */}
+          {vulnerabilities.length > 0 && (
+            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '75ms' }}>
+              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+                <ShieldAlert className="w-6 h-6 text-red-500" />
+                Security Vulnerabilities ({vulnerabilities.length})
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Known CVEs detected via <a href="https://osv.dev" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google OSV Database</a>
+              </p>
+              <div className="space-y-4">
+                {vulnerabilities.map((vuln: any, index: number) => (
+                  <div
+                    key={index}
+                    className="bg-codeBg border border-border rounded-lg p-4 hover:border-red-500/30 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <a 
+                            href={vuln.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-semibold text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                          >
+                            {vuln.id}
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                          <code className="code-font text-sm text-primary bg-primary/10 px-2 py-1 rounded">
+                            {vuln.package}@{vuln.version}
+                          </code>
+                          <span
+                            className={`text-xs px-2 py-1 rounded border font-medium ${getVulnSeverityColor(vuln.severity)}`}
+                          >
+                            {vuln.severity}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{vuln.summary}</p>
+                        {vuln.fixed_versions && (
+                          <p className="text-xs text-primary">
+                            Fixed in: <code className="code-font bg-primary/10 px-1.5 py-0.5 rounded">{vuln.fixed_versions}</code>
+                          </p>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{issue.description}</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Issues Summary Card */}
+          {issues.length > 0 && (
+            <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-primary" />
+                Detected Issues ({issues.length})
+              </h2>
+              <div className="space-y-4">
+                {issues.map((issue: any, index: number) => (
+                  <div
+                    key={index}
+                    className="bg-codeBg border border-border rounded-lg p-4 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      {getSeverityIcon(issue.severity)}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h3 className="font-semibold text-foreground">{issue.title}</h3>
+                          <code className="code-font text-sm text-primary bg-primary/10 px-2 py-1 rounded">
+                            {issue.package}
+                          </code>
+                          <span
+                            className={`text-xs px-2 py-1 rounded border font-medium ${getSeverityColor(
+                              issue.severity
+                            )}`}
+                          >
+                            {issue.severity}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{issue.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* AI Suggestions Card */}
-          <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
-              <AlertCircle className="w-6 h-6 text-primary" />
-              AI Fix Suggestions
-            </h2>
-            <ul className="space-y-3">
-              {suggestions.map((suggestion: string, index: number) => (
-                <li key={index} className="flex items-start gap-3 text-muted-foreground">
-                  <ArrowRight className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <span>{suggestion}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {suggestions.length > 0 && (
+            <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+                <AlertCircle className="w-6 h-6 text-primary" />
+                AI Fix Suggestions
+              </h2>
+              <ul className="space-y-3">
+                {suggestions.map((suggestion: string, index: number) => (
+                  <li key={index} className="flex items-start gap-3 text-muted-foreground">
+                    <ArrowRight className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>{suggestion}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Dependency Diff Viewer */}
-          <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <h2 className="text-2xl font-bold text-foreground mb-6">Before → After</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                  Detected Versions
-                </h3>
-                <div className="bg-codeBg border border-border rounded-lg p-4 space-y-2">
-                  {dependencyDiff.map((dep: any, index: number) => (
-                    <div key={index} className="code-font text-sm">
-                      <span className="text-foreground">{dep.package}</span>
-                      <span className="text-muted-foreground"> == </span>
-                      <span className={dep.before === "unversioned" ? "text-destructive" : "text-muted-foreground"}>
-                        {dep.before}
-                      </span>
-                    </div>
-                  ))}
+          {dependencyDiff.length > 0 && (
+            <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '300ms' }}>
+              <h2 className="text-2xl font-bold text-foreground mb-6">Before → After</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    Detected Versions
+                  </h3>
+                  <div className="bg-codeBg border border-border rounded-lg p-4 space-y-2">
+                    {dependencyDiff.map((dep: any, index: number) => (
+                      <div key={index} className="code-font text-sm">
+                        <span className="text-foreground">{dep.package}</span>
+                        <span className="text-muted-foreground"> == </span>
+                        <span className={dep.before === "unversioned" ? "text-destructive" : "text-muted-foreground"}>
+                          {dep.before}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                  Suggested Versions
-                </h3>
-                <div className="bg-codeBg border border-primary/20 rounded-lg p-4 space-y-2 glow-border">
-                  {dependencyDiff.map((dep: any, index: number) => (
-                    <div key={index} className="code-font text-sm">
-                      <span className="text-foreground">{dep.package}</span>
-                      <span className="text-muted-foreground"> == </span>
-                      <span className="text-primary font-medium">{dep.after}</span>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    Suggested Versions
+                  </h3>
+                  <div className="bg-codeBg border border-primary/20 rounded-lg p-4 space-y-2 glow-border">
+                    {dependencyDiff.map((dep: any, index: number) => (
+                      <div key={index} className="code-font text-sm">
+                        <span className="text-foreground">{dep.package}</span>
+                        <span className="text-muted-foreground"> == </span>
+                        <span className="text-primary font-medium">{dep.after}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* CTA Button */}
           <div className="flex justify-center pt-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
