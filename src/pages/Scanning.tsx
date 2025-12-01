@@ -64,10 +64,17 @@ const Scanning = () => {
         // Advance to step 6 (Preparing your results) when edge function returns
         setCurrentStep(5);
         
-        if (error) throw error;
-
-        if (!data.success) {
+        // Check for detailed error in response body first (more specific)
+        if (data && !data.success) {
           throw new Error(data.error || 'Analysis failed');
+        }
+        
+        // Then check for generic SDK error
+        if (error) throw error;
+        
+        // Final validation
+        if (!data) {
+          throw new Error('No response from analysis service');
         }
 
         // Complete all steps and navigate to results
