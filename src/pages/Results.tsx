@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Package, Download, Loader2, Share2, BookOpen, Copy, Check } from "lucide-react";
+import { AlertTriangle, Info, AlertCircle, Sparkles, ArrowRight, Package, Download, Loader2, Share2, BookOpen, Copy, Check, Shield, ShieldAlert, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -88,11 +88,13 @@ const Results = () => {
   const issues = analysisData.issues || [];
   const suggestions = analysisData.suggestions || [];
   const dependencyDiff = analysisData.dependencyDiff || [];
+  const vulnerabilities = analysisData.vulnerabilities || [];
 
   const getSeverityIcon = (severity: string) => {
     const severityLower = severity.toLowerCase();
     switch (severityLower) {
       case "high":
+      case "critical":
         return <AlertTriangle className="w-5 h-5 text-destructive" />;
       case "medium":
         return <AlertCircle className="w-5 h-5 text-yellow-500" />;
@@ -106,11 +108,29 @@ const Results = () => {
   const getSeverityColor = (severity: string) => {
     const severityLower = severity.toLowerCase();
     switch (severityLower) {
+      case "critical":
+        return "bg-red-600/10 text-red-500 border-red-600/20";
       case "high":
         return "bg-destructive/10 text-destructive border-destructive/20";
       case "medium":
         return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
       case "low":
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      default:
+        return "bg-muted/10 text-muted-foreground border-muted/20";
+    }
+  };
+
+  const getVulnSeverityColor = (severity: string) => {
+    const severityUpper = severity.toUpperCase();
+    switch (severityUpper) {
+      case "CRITICAL":
+        return "bg-red-600/10 text-red-500 border-red-600/20";
+      case "HIGH":
+        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+      case "MEDIUM":
+        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+      case "LOW":
         return "bg-blue-500/10 text-blue-500 border-blue-500/20";
       default:
         return "bg-muted/10 text-muted-foreground border-muted/20";
@@ -126,6 +146,7 @@ const Results = () => {
           issues,
           suggestions,
           dependencyDiff,
+          vulnerabilities,
           detectedFormats,
           primaryFormat: location.state?.primaryFormat,
           pythonVersion,
@@ -153,6 +174,7 @@ const Results = () => {
           reproducibilityScore: analysisData.reproducibilityScore,
           issues,
           dependencyDiff,
+          vulnerabilities,
         }
       });
 
@@ -181,6 +203,7 @@ const Results = () => {
             issues,
             suggestions,
             dependencyDiff,
+            vulnerabilities,
             detectedFormats,
             foundFiles,
             pythonVersion,
@@ -229,6 +252,7 @@ const Results = () => {
         reproducibilityScore: analysisData.reproducibilityScore,
         issues: issues,
         dependencyDiff: dependencyDiff,
+        vulnerabilities: vulnerabilities,
       }
     });
   };
@@ -273,6 +297,12 @@ const Results = () => {
                     Python {pythonVersion}
                   </span>
                 )}
+                {vulnerabilities.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    {vulnerabilities.length} CVE{vulnerabilities.length !== 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -296,7 +326,7 @@ const Results = () => {
           )}
 
           {/* Success State - No Issues Found */}
-          {issues.length === 0 && (
+          {issues.length === 0 && vulnerabilities.length === 0 && (
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-8 md:p-12 backdrop-blur-sm animate-fade-in text-center" style={{ animationDelay: '100ms' }}>
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -320,8 +350,8 @@ const Results = () => {
                     <p className="text-sm font-medium text-foreground">No conflicts detected</p>
                   </div>
                   <div className="bg-card/30 border border-border/50 rounded-lg p-4">
-                    <Check className="w-5 h-5 text-primary mb-2" />
-                    <p className="text-sm font-medium text-foreground">Reproducible environment</p>
+                    <Shield className="w-5 h-5 text-primary mb-2" />
+                    <p className="text-sm font-medium text-foreground">No vulnerabilities</p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 mt-6">
@@ -342,6 +372,58 @@ const Results = () => {
                     Return Home
                   </Button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Security Vulnerabilities Card */}
+          {vulnerabilities.length > 0 && (
+            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '75ms' }}>
+              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+                <ShieldAlert className="w-6 h-6 text-red-500" />
+                Security Vulnerabilities ({vulnerabilities.length})
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Known CVEs detected via <a href="https://osv.dev" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google OSV Database</a>
+              </p>
+              <div className="space-y-4">
+                {vulnerabilities.map((vuln: any, index: number) => (
+                  <div
+                    key={index}
+                    className="bg-codeBg border border-border rounded-lg p-4 hover:border-red-500/30 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <a 
+                            href={vuln.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-semibold text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                          >
+                            {vuln.id}
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                          <code className="code-font text-sm text-primary bg-primary/10 px-2 py-1 rounded">
+                            {vuln.package}@{vuln.version}
+                          </code>
+                          <span
+                            className={`text-xs px-2 py-1 rounded border font-medium ${getVulnSeverityColor(vuln.severity)}`}
+                          >
+                            {vuln.severity}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{vuln.summary}</p>
+                        {vuln.fixed_versions && (
+                          <p className="text-xs text-primary">
+                            Fixed in: <code className="code-font bg-primary/10 px-1.5 py-0.5 rounded">{vuln.fixed_versions}</code>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -447,7 +529,7 @@ const Results = () => {
           {/* Action Buttons */}
           <div className="flex justify-center gap-4 pt-4 animate-fade-in flex-wrap" style={{ animationDelay: '400ms' }}>
             {/* Only show Generate Snapshot button if there are fixes to apply */}
-            {(issues.length > 0 || suggestions.length > 0 || dependencyDiff.length > 0) && (
+            {(issues.length > 0 || suggestions.length > 0 || dependencyDiff.length > 0 || vulnerabilities.length > 0) && (
               <Button
                 onClick={handleGenerateSnapshot}
                 disabled={isGeneratingSnapshot}

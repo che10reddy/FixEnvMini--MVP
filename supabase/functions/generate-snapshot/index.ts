@@ -15,7 +15,8 @@ serve(async (req) => {
     const { 
       issues, 
       suggestions, 
-      dependencyDiff, 
+      dependencyDiff,
+      vulnerabilities,
       detectedFormats, 
       primaryFormat, 
       pythonVersion, 
@@ -29,6 +30,7 @@ serve(async (req) => {
     console.log('Primary format:', primaryFormat);
     console.log('Python version:', pythonVersion);
     console.log('Reproducibility score:', reproducibilityScore);
+    console.log('Vulnerabilities:', vulnerabilities?.length || 0);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -60,6 +62,12 @@ serve(async (req) => {
       `${dep.package}: ${dep.before} → ${dep.after}`
     ).join('\n');
 
+    const vulnerabilitiesText = vulnerabilities?.length > 0 
+      ? `\n\nSECURITY VULNERABILITIES (${vulnerabilities.length}):\n${vulnerabilities.map((v: any) => 
+          `- ${v.id}: ${v.package}@${v.version} (${v.severity})${v.fixed_versions ? ` - Fix: upgrade to ${v.fixed_versions}` : ''}`
+        ).join('\n')}`
+      : '';
+
     const pythonVersionText = pythonVersion && pythonVersion !== 'unknown' 
       ? `\n\nTARGET PYTHON VERSION: ${pythonVersion}\nEnsure all packages are compatible with Python ${pythonVersion}.`
       : '';
@@ -82,17 +90,20 @@ AI SUGGESTIONS:
 
 DEPENDENCY CORRECTIONS:
 ${dependenciesText}
+${vulnerabilitiesText}
 
 CRITICAL INSTRUCTIONS:
 1. Generate a COMPLETE ${outputFormat} file including ALL dependencies (not just the ones with issues)
 2. For EACH dependency, add an inline comment explaining:
    - If it was fixed: what was wrong and why this version was chosen
+   - If it has a security vulnerability: note the CVE and the fix
    - If it was unchanged: confirm it's already correct
 3. Use the "after" versions from the dependency corrections
 4. Pin ALL dependencies to specific versions (no unpinned packages)
 5. Ensure compatibility with Python ${pythonVersion || 'latest stable'}
 6. Follow ${outputFormat} best practices and syntax
 7. Add a header comment explaining this is an auto-fixed file
+8. If there are security vulnerabilities, prioritize upgrading to fixed versions
 
 EXAMPLE FORMAT for requirements.txt:
 # Auto-fixed by FixEnv Mini - ${new Date().toISOString().split('T')[0]}
@@ -100,7 +111,7 @@ EXAMPLE FORMAT for requirements.txt:
 
 numpy==1.26.2  # Fixed: was unversioned, pinned to latest stable
 pandas==2.1.0  # Fixed: was 1.5.3, upgraded for Python 3.11 compatibility
-requests==2.31.0  # Already correct, no changes needed
+requests==2.31.0  # Security: upgraded from 2.28.0 to fix CVE-2023-32681
 
 ${outputFormat === 'pyproject.toml' ? `
 For Poetry projects, use this structure with inline comments:
@@ -225,6 +236,16 @@ CRITICAL: Respond with ONLY the complete file content with inline comments. No e
           after: dep.after,
           reason: dep.reason || "Version correction applied",
         })),
+        vulnerabilities: vulnerabilities?.map((vuln: any) => ({
+          id: vuln.id,
+          package: vuln.package,
+          version: vuln.version,
+          severity: vuln.severity,
+          summary: vuln.summary,
+          fixed_versions: vuln.fixed_versions,
+          link: vuln.link,
+        })) || [],
+        vulnerability_count: vulnerabilities?.length || 0,
       },
       fixed_dependencies: {
         format: outputFormat,
