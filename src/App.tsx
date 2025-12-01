@@ -7,7 +7,6 @@ import PageTransition from "./components/PageTransition";
 import Index from "./pages/Index";
 import Scanning from "./pages/Scanning";
 import Results from "./pages/Results";
-import ReproducibilityScore from "./pages/ReproducibilityScore";
 import FixPreview from "./pages/FixPreview";
 import SharedResults from "./pages/SharedResults";
 import NotFound from "./pages/NotFound";
@@ -23,7 +22,6 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<Index />} />
         <Route path="/scanning" element={<Scanning />} />
         <Route path="/results" element={<Results />} />
-        <Route path="/reproducibility" element={<ReproducibilityScore />} />
         <Route path="/fix-preview" element={<FixPreview />} />
         <Route path="/share/:token" element={<SharedResults />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
