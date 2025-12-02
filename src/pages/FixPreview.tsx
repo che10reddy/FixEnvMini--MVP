@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Download, FileCheck, Target, Home, Package, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Shield, ExternalLink } from "lucide-react";
+import { Download, FileCheck, Target, Home, Package, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Shield, ExternalLink, Zap, Pin, ArrowRight, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -18,6 +18,10 @@ const FixPreview = () => {
   const [isFixedDepsOpen, setIsFixedDepsOpen] = useState(false);
   const [isFullZfixOpen, setIsFullZfixOpen] = useState(false);
   const [isScoreBreakdownOpen, setIsScoreBreakdownOpen] = useState(false);
+  const [isVulnerabilitiesOpen, setIsVulnerabilitiesOpen] = useState(false);
+  const [isPythonCompatOpen, setIsPythonCompatOpen] = useState(false);
+  const [isMissingPinsOpen, setIsMissingPinsOpen] = useState(false);
+  const [isChangesOpen, setIsChangesOpen] = useState(false);
 
   const zfixData = location.state?.zfixData;
   const fixedContent = location.state?.fixedContent || "";
@@ -27,22 +31,52 @@ const FixPreview = () => {
   const repositoryUrl = location.state?.repositoryUrl || "";
   const reproducibilityScore = location.state?.reproducibilityScore;
   const issues = location.state?.issues || [];
+  const suggestions = location.state?.suggestions || zfixData?.analysis?.suggestions || [];
   const dependencyDiff = location.state?.dependencyDiff || [];
   const vulnerabilities = location.state?.vulnerabilities || zfixData?.analysis?.vulnerabilities || [];
-  const [isVulnerabilitiesOpen, setIsVulnerabilitiesOpen] = useState(false);
+  const pythonVersion = zfixData?.metadata?.python_version || location.state?.pythonVersion || "Unknown";
 
   const score = reproducibilityScore || zfixData?.analysis?.reproducibility_score || 0;
+
+  // Extract Python compatibility issues
+  const pythonCompatibilityIssues = issues.filter((issue: any) => {
+    const text = `${issue.title} ${issue.description}`.toLowerCase();
+    return text.includes("python") || text.includes("compatibility") || text.includes("incompatible") || text.includes("requires python");
+  });
+
+  // Extract missing pins from dependencyDiff
+  const missingPins = dependencyDiff.filter((dep: any) => dep.before === "unversioned");
+
+  // Generate changes with reasoning from suggestions and dependency diff
+  const changesWithReasoning = dependencyDiff.map((dep: any) => {
+    // Find matching suggestion for reasoning
+    const matchingSuggestion = suggestions.find((sug: string) => 
+      sug.toLowerCase().includes(dep.package.toLowerCase())
+    );
+    
+    let reason = "";
+    if (dep.before === "unversioned") {
+      reason = "Added version pin for reproducibility";
+    } else if (dep.before !== dep.after) {
+      reason = matchingSuggestion || "Updated to recommended version";
+    } else {
+      reason = "Version verified as compatible";
+    }
+    
+    return {
+      ...dep,
+      reason
+    };
+  });
 
   // Generate positive and negative points from actual data
   const generatePoints = () => {
     const positive: string[] = [];
     const negative: string[] = [];
     
-    // Count pinned vs unpinned packages
     const unpinned = dependencyDiff.filter((dep: any) => dep.before === "unversioned").length;
     const pinned = dependencyDiff.filter((dep: any) => dep.before !== "unversioned").length;
     
-    // POSITIVE POINTS - Always show something meaningful
     if (issues.length === 0) {
       positive.push("No dependency issues detected");
       positive.push("All packages properly configured");
@@ -60,7 +94,6 @@ const FixPreview = () => {
       positive.push("Dependencies are documented");
     }
     
-    // Count issues by severity for positive checks
     const highIssues = issues.filter((i: any) => i.severity.toLowerCase() === 'high');
     const conflicts = issues.filter((i: any) => 
       i.title.toLowerCase().includes("conflict") || 
@@ -75,18 +108,15 @@ const FixPreview = () => {
       positive.push("No conflicting dependencies");
     }
     
-    // Fallback: Always ensure at least some positive points
     if (positive.length === 0) {
       positive.push("Repository structure detected");
       positive.push("Analysis completed successfully");
     }
     
-    // NEGATIVE POINTS - Based on severity and specific issues
     if (unpinned > 0) {
       negative.push(`${unpinned} package${unpinned > 1 ? 's' : ''} missing version pins`);
     }
     
-    // Group issues by severity
     const medIssues = issues.filter((i: any) => i.severity.toLowerCase() === 'medium');
     const lowIssues = issues.filter((i: any) => i.severity.toLowerCase() === 'low');
     
@@ -100,7 +130,6 @@ const FixPreview = () => {
       negative.push(`${lowIssues.length} minor issue${lowIssues.length > 1 ? 's' : ''} present`);
     }
     
-    // Fallback: If score < 100 but no specific negative points, add generic feedback
     if (negative.length === 0 && score < 100) {
       negative.push("Minor optimization opportunities detected");
     }
@@ -110,7 +139,6 @@ const FixPreview = () => {
   
   const { positive: positivePoints, negative: negativePoints } = generatePoints();
 
-  // Color logic based on score
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-primary";
     if (score >= 50) return "text-yellow-500";
@@ -196,7 +224,7 @@ const FixPreview = () => {
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Python Version</p>
-                <p className="text-sm text-foreground font-mono">{zfixData?.metadata?.python_version || 'Unknown'}</p>
+                <p className="text-sm text-foreground font-mono">{pythonVersion}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Generated At</p>
@@ -228,7 +256,7 @@ const FixPreview = () => {
               </div>
               <h2 className="text-xl font-bold text-foreground">Analysis Summary</h2>
             </div>
-            <div className={`grid grid-cols-1 gap-4 ${vulnerabilities.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <p className="text-2xl font-bold text-primary">{score}%</p>
                 <p className="text-sm text-muted-foreground mt-1">Reproducibility Score</p>
@@ -237,14 +265,12 @@ const FixPreview = () => {
                 <p className="text-2xl font-bold text-destructive">{zfixData?.analysis?.total_issues || 0}</p>
                 <p className="text-sm text-muted-foreground mt-1">Issues Detected</p>
               </div>
-              {vulnerabilities.length > 0 && (
-                <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
-                  <p className="text-2xl font-bold text-red-400">{vulnerabilities.length}</p>
-                  <p className="text-sm text-muted-foreground mt-1">CVEs Found</p>
-                </div>
-              )}
+              <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
+                <p className="text-2xl font-bold text-red-400">{vulnerabilities.length}</p>
+                <p className="text-sm text-muted-foreground mt-1">CVEs Found</p>
+              </div>
               <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
-                <p className="text-2xl font-bold text-accent">{(zfixData?.analysis?.suggestions || []).length}</p>
+                <p className="text-2xl font-bold text-accent">{suggestions.length}</p>
                 <p className="text-sm text-muted-foreground mt-1">AI Suggestions</p>
               </div>
             </div>
@@ -314,6 +340,208 @@ const FixPreview = () => {
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Python Version Compatibility - Collapsible */}
+          {pythonCompatibilityIssues.length > 0 && (
+            <Collapsible
+              open={isPythonCompatOpen}
+              onOpenChange={setIsPythonCompatOpen}
+              className="bg-card/50 border border-border rounded-xl backdrop-blur-sm animate-fade-in"
+              style={{ animationDelay: '180ms' }}
+            >
+              <CollapsibleTrigger asChild>
+                <button className="w-full px-6 py-4 flex items-center justify-between hover:bg-card/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Zap className="w-5 h-5 text-yellow-500" />
+                    <h2 className="text-xl font-bold text-foreground">Python Version Compatibility</h2>
+                    <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
+                      {pythonCompatibilityIssues.length} warning{pythonCompatibilityIssues.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {isPythonCompatOpen ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6 space-y-3">
+                  <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-yellow-400">
+                      Detected Python version: <span className="font-mono font-bold">{pythonVersion}</span>
+                    </p>
+                  </div>
+                  {pythonCompatibilityIssues.map((issue: any, index: number) => {
+                    const severityColor = 
+                      issue.severity.toLowerCase() === 'high' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                      issue.severity.toLowerCase() === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                      'bg-blue-500/20 text-blue-400 border-blue-500/30';
+                    
+                    // Extract upgrade recommendation from suggestions
+                    const relatedSuggestion = suggestions.find((s: string) => 
+                      issue.package && s.toLowerCase().includes(issue.package.toLowerCase())
+                    );
+                    
+                    return (
+                      <div key={index} className="bg-card/30 border border-border rounded-lg p-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-xs px-2 py-0.5 rounded border ${severityColor}`}>
+                              {issue.severity}
+                            </span>
+                            <span className="font-medium text-sm text-foreground">{issue.title}</span>
+                          </div>
+                          {issue.package && (
+                            <p className="text-sm text-muted-foreground">
+                              Package: <span className="font-mono text-foreground">{issue.package}</span>
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">{issue.description}</p>
+                          {relatedSuggestion && (
+                            <div className="flex items-center gap-2 mt-2 bg-primary/5 border border-primary/20 rounded p-2">
+                              <Lightbulb className="w-4 h-4 text-primary flex-shrink-0" />
+                              <p className="text-xs text-primary">{relatedSuggestion}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Missing Version Pins - Collapsible */}
+          {missingPins.length > 0 && (
+            <Collapsible
+              open={isMissingPinsOpen}
+              onOpenChange={setIsMissingPinsOpen}
+              className="bg-card/50 border border-border rounded-xl backdrop-blur-sm animate-fade-in"
+              style={{ animationDelay: '185ms' }}
+            >
+              <CollapsibleTrigger asChild>
+                <button className="w-full px-6 py-4 flex items-center justify-between hover:bg-card/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Pin className="w-5 h-5 text-orange-400" />
+                    <h2 className="text-xl font-bold text-foreground">Missing Version Pins</h2>
+                    <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
+                      {missingPins.length} package{missingPins.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {isMissingPinsOpen ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <div className="bg-card/30 border border-border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-card/50">
+                          <th className="text-left px-4 py-3 text-muted-foreground font-medium">Package</th>
+                          <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
+                          <th className="text-left px-4 py-3 text-muted-foreground font-medium">Recommended Version</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {missingPins.map((dep: any, index: number) => (
+                          <tr key={index} className="border-b border-border/50 last:border-0">
+                            <td className="px-4 py-3 font-mono text-foreground">{dep.package}</td>
+                            <td className="px-4 py-3">
+                              <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">
+                                Unpinned
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="font-mono text-primary">{dep.after}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Unpinned dependencies can cause inconsistent builds across environments. Pin versions for reproducibility.
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Changes & Reasoning - Collapsible */}
+          {changesWithReasoning.length > 0 && (
+            <Collapsible
+              open={isChangesOpen}
+              onOpenChange={setIsChangesOpen}
+              className="bg-card/50 border border-border rounded-xl backdrop-blur-sm animate-fade-in"
+              style={{ animationDelay: '190ms' }}
+            >
+              <CollapsibleTrigger asChild>
+                <button className="w-full px-6 py-4 flex items-center justify-between hover:bg-card/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <ArrowRight className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-bold text-foreground">Changes & Reasoning</h2>
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                      {changesWithReasoning.length} change{changesWithReasoning.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {isChangesOpen ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6 space-y-3">
+                  {changesWithReasoning.map((change: any, index: number) => {
+                    const isNewPin = change.before === "unversioned";
+                    const isUpgrade = !isNewPin && change.before !== change.after;
+                    
+                    return (
+                      <div key={index} className="bg-card/30 border border-border rounded-lg p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-medium text-foreground">{change.package}</span>
+                              {isNewPin && (
+                                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">
+                                  New Pin
+                                </span>
+                              )}
+                              {isUpgrade && (
+                                <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">
+                                  Updated
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="font-mono text-muted-foreground bg-muted/20 px-2 py-0.5 rounded">
+                                {change.before}
+                              </span>
+                              <ArrowRight className="w-4 h-4 text-primary" />
+                              <span className="font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                {change.after}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Lightbulb className="w-3 h-3" />
+                              {change.reason}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );
@@ -462,7 +690,7 @@ const FixPreview = () => {
                   <div className="p-4 overflow-x-auto max-h-[400px] overflow-y-auto">
                     <pre className="code-font text-sm leading-relaxed">
                       <code className="text-foreground">
-                        {fixedContent.split('\n').map((line, index) => (
+                        {fixedContent.split('\n').map((line: string, index: number) => (
                           <div key={index} className="hover:bg-primary/5 transition-colors px-2 -mx-2 rounded">
                             <span className="inline-block w-10 text-muted-foreground select-none text-xs">
                               {index + 1}
