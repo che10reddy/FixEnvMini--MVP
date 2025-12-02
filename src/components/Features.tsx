@@ -30,13 +30,13 @@ const usageOptions = [
     icon: Terminal,
     title: "Terminal",
     description: "Local CLI scanning",
-    command: "npx fixenv-cli scan .",
+    command: "npx fixenv-cli scan $REPO",
   },
   {
     icon: GitBranch,
     title: "CI/CD",
-    description: "GitHub Actions integration",
-    command: "fixenv-cli scan $REPO",
+    description: "Add to your workflow",
+    command: "See integration guide",
   },
   {
     icon: Globe,
