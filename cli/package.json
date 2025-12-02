@@ -1,6 +1,6 @@
 {
   "name": "fixenv-cli",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "CLI tool for FixEnv - Python environment analyzer",
   "main": "index.js",
   "bin": {
