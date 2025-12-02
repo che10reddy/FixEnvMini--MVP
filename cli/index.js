@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import chalk from 'chalk';
-import ora from 'ora';
+const chalk = require("chalk");
+const ora = require("ora");
 
 const API_URL = 'https://ncafkcmxumkklboonfhs.supabase.co/functions/v1/analyze-repo';
 
@@ -16,7 +16,7 @@ async function main() {
 
   // Version command
   if (args.includes('--version') || args.includes('-v')) {
-    console.log('fixenv-cli v1.0.0');
+    console.log('fixenv-cli v1.0.4');
     process.exit(0);
   }
 
