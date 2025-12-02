@@ -1,4 +1,5 @@
 import { Github, Book, Mail } from "lucide-react";
+import CLIDocsDialog from "./CLIDocsDialog";
 
 const Footer = () => {
   return (
@@ -26,13 +27,14 @@ const Footer = () => {
               <Github className="w-5 h-5" />
               <span className="text-sm font-medium">GitHub</span>
             </a>
-            <a
-              href="#"
-              className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
-            >
-              <Book className="w-5 h-5" />
-              <span className="text-sm font-medium">Docs</span>
-            </a>
+            <CLIDocsDialog
+              trigger={
+                <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group">
+                  <Book className="w-5 h-5" />
+                  <span className="text-sm font-medium">Docs</span>
+                </button>
+              }
+            />
             <a
               href="mailto:che10guduru@gmail.com"
               className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
