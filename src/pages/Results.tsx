@@ -24,17 +24,35 @@ on: [push, pull_request]
 jobs:
   fixenv-check:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install FixEnv CLI
+        run: npm install -g fixenv-cli
+
       - name: Run FixEnv Analysis
         run: |
-          curl -X POST https://ncafkcmxumkklboonfhs.supabase.co/functions/v1/analyze-repo \\
-            -H "Content-Type: application/json" \\
-            -d '{"repoUrl": "\${{ github.server_url }}/\${{ github.repository }}"}'
-      
-      - name: Check Results
-        run: echo "Analysis complete. Review results at FixEnv."`;
+          fixenv-cli scan https://github.com/\${{ github.repository }} --json > fixenv-results.json
+
+      - name: Fail on High Severity Vulnerabilities
+        run: |
+          if jq -e '.data.vulnerabilities | map(select(.severity == "HIGH" or .severity == "CRITICAL")) | length > 0' fixenv-results.json > /dev/null; then
+            echo "❌ High severity vulnerabilities detected!"
+            jq '.data.vulnerabilities' fixenv-results.json
+            exit 1
+          fi
+
+      - name: Upload FixEnv Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: fixenv-results
+          path: fixenv-results.json`;
 
 const Results = () => {
   const navigate = useNavigate();
@@ -601,10 +619,10 @@ const Results = () => {
           <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in mt-8" style={{ animationDelay: '500ms' }}>
             <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-primary" />
-              Using FixEnv in CI/CD
+              🚀 GitHub Actions Support
             </h2>
             <p className="text-muted-foreground mb-4">
-              Integrate FixEnv into your continuous integration workflow to automatically check dependency health on every push.
+              Add FixEnv to your CI pipeline in less than 30 seconds. Automatically detect dependency conflicts, security vulnerabilities, and reproducibility issues on every push or pull request.
             </p>
             
             <div className="space-y-4">
@@ -639,20 +657,20 @@ const Results = () => {
                 <h3 className="font-semibold text-foreground mb-2">Best Practices</h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
-                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Run FixEnv checks on every pull request to catch dependency issues early</span>
+                    <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>Run on every PR</strong> — Catch dependency issues before they reach main</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Set up notifications for high-severity issues to your team's Slack/Discord</span>
+                    <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>Block merges on CVEs</strong> — FixEnv detects vulnerabilities via OSV.dev automatically</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Use the auto-fix feature to generate corrected dependency files automatically</span>
+                    <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>Use snapshot in releases</strong> — Guarantee reproducible environments for every deployment</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <ArrowRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Export results as JSON for integration with other monitoring tools</span>
+                    <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>Export JSON for alerts</strong> — Teams can automate Slack/Discord notifications using CLI</span>
                   </li>
                 </ul>
               </div>
