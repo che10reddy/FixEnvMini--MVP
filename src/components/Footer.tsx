@@ -1,5 +1,4 @@
-import { Github, Book, Mail } from "lucide-react";
-import CLIDocsDialog from "./CLIDocsDialog";
+import { Github, Package, Mail } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -27,14 +26,15 @@ const Footer = () => {
               <Github className="w-5 h-5" />
               <span className="text-sm font-medium">GitHub</span>
             </a>
-            <CLIDocsDialog
-              trigger={
-                <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group">
-                  <Book className="w-5 h-5" />
-                  <span className="text-sm font-medium">Docs</span>
-                </button>
-              }
-            />
+            <a
+              href="https://www.npmjs.com/package/fixenv-cli"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
+            >
+              <Package className="w-5 h-5" />
+              <span className="text-sm font-medium">npm Package</span>
+            </a>
             <a
               href="mailto:che10guduru@gmail.com"
               className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"

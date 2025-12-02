@@ -38,6 +38,27 @@ const FixPreview = () => {
 
   const score = reproducibilityScore || zfixData?.analysis?.reproducibility_score || 0;
 
+  // Calculate Security Score (0-100)
+  const calculateSecurityScore = () => {
+    let secScore = 100;
+    for (const vuln of vulnerabilities) {
+      const severity = vuln.severity?.toUpperCase() || 'LOW';
+      if (severity === 'CRITICAL') secScore -= 25;
+      else if (severity === 'HIGH') secScore -= 15;
+      else if (severity === 'MEDIUM') secScore -= 8;
+      else secScore -= 3;
+    }
+    return Math.max(0, Math.min(100, secScore));
+  };
+
+  const securityScore = calculateSecurityScore();
+
+  const getSecurityScoreColor = (score: number) => {
+    if (score >= 80) return "text-primary";
+    if (score >= 50) return "text-yellow-500";
+    return "text-red-500";
+  };
+
   // Extract Python compatibility issues
   const pythonCompatibilityIssues = issues.filter((issue: any) => {
     const text = `${issue.title} ${issue.description}`.toLowerCase();
@@ -256,22 +277,26 @@ const FixPreview = () => {
               </div>
               <h2 className="text-xl font-bold text-foreground">Analysis Summary</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <p className="text-2xl font-bold text-primary">{score}%</p>
-                <p className="text-sm text-muted-foreground mt-1">Reproducibility Score</p>
+                <p className="text-sm text-muted-foreground mt-1">Reproducibility</p>
+              </div>
+              <div className={`bg-primary/5 border border-primary/20 rounded-lg p-4`}>
+                <p className={`text-2xl font-bold ${getSecurityScoreColor(securityScore)}`}>{securityScore}%</p>
+                <p className="text-sm text-muted-foreground mt-1">Security Score</p>
               </div>
               <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
                 <p className="text-2xl font-bold text-destructive">{zfixData?.analysis?.total_issues || 0}</p>
-                <p className="text-sm text-muted-foreground mt-1">Issues Detected</p>
+                <p className="text-sm text-muted-foreground mt-1">Issues</p>
               </div>
               <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
                 <p className="text-2xl font-bold text-red-400">{vulnerabilities.length}</p>
-                <p className="text-sm text-muted-foreground mt-1">CVEs Found</p>
+                <p className="text-sm text-muted-foreground mt-1">CVEs</p>
               </div>
               <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
                 <p className="text-2xl font-bold text-accent">{suggestions.length}</p>
-                <p className="text-sm text-muted-foreground mt-1">AI Suggestions</p>
+                <p className="text-sm text-muted-foreground mt-1">Suggestions</p>
               </div>
             </div>
           </div>

@@ -108,6 +108,27 @@ const Results = () => {
   const dependencyDiff = analysisData.dependencyDiff || [];
   const vulnerabilities = analysisData.vulnerabilities || [];
 
+  // Calculate Security Score (0-100)
+  const calculateSecurityScore = () => {
+    let score = 100;
+    for (const vuln of vulnerabilities) {
+      const severity = vuln.severity?.toUpperCase() || 'LOW';
+      if (severity === 'CRITICAL') score -= 25;
+      else if (severity === 'HIGH') score -= 15;
+      else if (severity === 'MEDIUM') score -= 8;
+      else score -= 3;
+    }
+    return Math.max(0, Math.min(100, score));
+  };
+
+  const securityScore = calculateSecurityScore();
+
+  const getSecurityScoreColor = (score: number) => {
+    if (score >= 80) return "text-primary";
+    if (score >= 50) return "text-yellow-500";
+    return "text-red-500";
+  };
+
   const getSeverityIcon = (severity: string) => {
     const severityLower = severity.toLowerCase();
     switch (severityLower) {
@@ -321,6 +342,10 @@ const Results = () => {
                     {vulnerabilities.length} CVE{vulnerabilities.length !== 1 ? 's' : ''}
                   </span>
                 )}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium ${getSecurityScoreColor(securityScore)}`}>
+                  <Shield className="w-3.5 h-3.5" />
+                  Security: {securityScore}%
+                </span>
               </div>
             )}
           </div>

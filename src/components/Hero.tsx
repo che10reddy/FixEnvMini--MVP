@@ -79,7 +79,7 @@ const Hero = () => {
             className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in will-change-transform" 
             style={{ animationDelay: '100ms' }}
           >
-            Scan your GitHub repository for dependency conflicts, missing pins, and reproducibility issues.
+            Analyze Python environments for conflicts, security vulnerabilities, and reproducibility issues. Works in browser, terminal, and CI/CD.
           </p>
         </div>
 
@@ -112,7 +112,7 @@ const Hero = () => {
             </div>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            No installation required • Instant analysis • Python-only
+            6 dependency formats • CVE detection • GitHub Actions ready • CLI available
           </p>
         </div>
       </div>
