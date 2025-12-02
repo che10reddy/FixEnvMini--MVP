@@ -644,7 +644,7 @@ const Results = () => {
           <div className="bg-card/50 border border-border rounded-xl p-6 md:p-8 backdrop-blur-sm animate-fade-in mt-8" style={{ animationDelay: '500ms' }}>
             <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-primary" />
-              🚀 GitHub Actions Support
+               GitHub Actions Support
             </h2>
             <p className="text-muted-foreground mb-4">
               Add FixEnv to your CI pipeline in less than 30 seconds. Automatically detect dependency conflicts, security vulnerabilities, and reproducibility issues on every push or pull request.
