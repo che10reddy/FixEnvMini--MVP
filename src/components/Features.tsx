@@ -6,22 +6,22 @@ const features = [
   {
     icon: Search,
     title: "Dependency Analysis",
-    description: "Detect missing or conflicting versions in your requirements.txt file with precision.",
+    description: "Scan 6 formats: requirements.txt, pyproject.toml, Pipfile, Poetry, setup.py & more.",
   },
   {
     icon: Sparkles,
     title: "AI Fix Suggestions",
-    description: "Get recommended version pins, upgrades, and resolutions powered by intelligent analysis.",
+    description: "25+ conflict patterns analyzed by Google Gemini for version pins, upgrades & fixes.",
   },
   {
     icon: FileText,
     title: "Reproducible Snapshot",
-    description: "Generate a .zfix environment file to ensure consistent builds across all environments.",
+    description: "Export portable .zfix artifacts with fixed dependencies and dual scores.",
   },
   {
     icon: ShieldAlert,
     title: "Security Scanning",
-    description: "Detect known CVEs in your dependencies via Google OSV database with severity ratings.",
+    description: "Real-time CVE detection via Google OSV with CRITICAL/HIGH/MEDIUM/LOW ratings.",
   },
 ];
 
@@ -35,8 +35,8 @@ const usageOptions = [
   {
     icon: GitBranch,
     title: "CI/CD",
-    description: "Add to your workflow",
-    command: "See integration guide",
+    description: "GitHub Actions ready",
+    command: "Check footer ↓",
   },
   {
     icon: Globe,

@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { Copy, Check, Github, Cpu, Database, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Github, Cpu, Database, Sparkles } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 
 const ArchitectureDiagram = () => {
@@ -20,7 +18,7 @@ const ArchitectureDiagram = () => {
             </span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Our AI-powered pipeline analyzes your repository in seconds
+            AI-powered pipeline analyzes your repository in seconds
           </p>
         </div>
 
@@ -40,7 +38,7 @@ const ArchitectureDiagram = () => {
                 <div className="text-xs font-medium text-primary mb-2">STEP 1</div>
                 <h3 className="font-semibold text-foreground mb-2">Fetch Repository</h3>
                 <p className="text-sm text-muted-foreground">
-                  Parallel fetching of requirements.txt, pyproject.toml, Pipfile, setup.py & more
+                  Parallel GitHub API fetching: 6 dependency formats + Python version detection
                 </p>
               </div>
               {/* Arrow */}
@@ -58,7 +56,7 @@ const ArchitectureDiagram = () => {
                 <div className="text-xs font-medium text-accent mb-2">STEP 2</div>
                 <h3 className="font-semibold text-foreground mb-2">Parse & Detect</h3>
                 <p className="text-sm text-muted-foreground">
-                  Extract dependencies, detect Python version from runtime.txt, .python-version, workflows
+                  Multi-format parsing with caching + Python version from 5 sources
                 </p>
               </div>
               {/* Arrow */}
@@ -76,7 +74,7 @@ const ArchitectureDiagram = () => {
                 <div className="text-xs font-medium text-primary mb-2">STEP 3</div>
                 <h3 className="font-semibold text-foreground mb-2">AI Analysis</h3>
                 <p className="text-sm text-muted-foreground">
-                  Google Gemini analyzes 25+ conflict patterns, version compatibility & reproducibility
+                  Gemini AI: 25+ patterns, OSV.dev CVE scan, reproducibility & security scoring
                 </p>
               </div>
               {/* Arrow */}
@@ -94,7 +92,7 @@ const ArchitectureDiagram = () => {
                 <div className="text-xs font-medium text-accent mb-2">STEP 4</div>
                 <h3 className="font-semibold text-foreground mb-2">Generate Snapshot</h3>
                 <p className="text-sm text-muted-foreground">
-                  Export portable .zfix artifact with fixes, score & shareable results
+                  Shareable results, .zfix export, dual scores (Reproducibility + Security)
                 </p>
               </div>
             </div>
@@ -114,7 +112,7 @@ const ArchitectureDiagram = () => {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
-          {["React", "Supabase Edge Functions", "Google Gemini 2.5", "TypeScript"].map((tech) => (
+          {["React + TypeScript", "Lovable Cloud", "Google Gemini AI", "OSV.dev API"].map((tech) => (
             <span
               key={tech}
               className="px-3 py-1.5 rounded-full bg-codeBg border border-border text-xs font-medium text-muted-foreground"
