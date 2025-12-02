@@ -1,6 +1,7 @@
 # FixEnv CLI
 
 Command-line tool for scanning Python repositories for:
+
 	•	Dependency conflicts
 	•	Missing version pins
 	•	Outdated packages
