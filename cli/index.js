@@ -15,10 +15,14 @@ async function main() {
   }
 
   // Version command
-  if (args.includes('--version') || args.includes('-v')) {
-    console.log('fixenv-cli v1.0.4');
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pkg = require('./package.json');
+
+if (args.includes('--version') || args.includes('-v')) {
+    console.log(`fixenv-cli v${pkg.version}`);
     process.exit(0);
-  }
+}
 
   // Parse command
   const command = args[0];
