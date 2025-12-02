@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Download, FileCheck, Target, Home, Package, ChevronDown, ChevronUp, CheckCircle2, AlertCircle } from "lucide-react";
+import { Download, FileCheck, Target, Home, Package, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Shield, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -28,6 +28,8 @@ const FixPreview = () => {
   const reproducibilityScore = location.state?.reproducibilityScore;
   const issues = location.state?.issues || [];
   const dependencyDiff = location.state?.dependencyDiff || [];
+  const vulnerabilities = location.state?.vulnerabilities || zfixData?.analysis?.vulnerabilities || [];
+  const [isVulnerabilitiesOpen, setIsVulnerabilitiesOpen] = useState(false);
 
   const score = reproducibilityScore || zfixData?.analysis?.reproducibility_score || 0;
 
@@ -226,7 +228,7 @@ const FixPreview = () => {
               </div>
               <h2 className="text-xl font-bold text-foreground">Analysis Summary</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`grid grid-cols-1 gap-4 ${vulnerabilities.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <p className="text-2xl font-bold text-primary">{score}%</p>
                 <p className="text-sm text-muted-foreground mt-1">Reproducibility Score</p>
@@ -235,12 +237,91 @@ const FixPreview = () => {
                 <p className="text-2xl font-bold text-destructive">{zfixData?.analysis?.total_issues || 0}</p>
                 <p className="text-sm text-muted-foreground mt-1">Issues Detected</p>
               </div>
+              {vulnerabilities.length > 0 && (
+                <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
+                  <p className="text-2xl font-bold text-red-400">{vulnerabilities.length}</p>
+                  <p className="text-sm text-muted-foreground mt-1">CVEs Found</p>
+                </div>
+              )}
               <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
                 <p className="text-2xl font-bold text-accent">{(zfixData?.analysis?.suggestions || []).length}</p>
                 <p className="text-sm text-muted-foreground mt-1">AI Suggestions</p>
               </div>
             </div>
           </div>
+
+          {/* Security Vulnerabilities - Collapsible */}
+          {vulnerabilities.length > 0 && (
+            <Collapsible
+              open={isVulnerabilitiesOpen}
+              onOpenChange={setIsVulnerabilitiesOpen}
+              className="bg-card/50 border border-border rounded-xl backdrop-blur-sm animate-fade-in"
+              style={{ animationDelay: '175ms' }}
+            >
+              <CollapsibleTrigger asChild>
+                <button className="w-full px-6 py-4 flex items-center justify-between hover:bg-card/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5 text-destructive" />
+                    <h2 className="text-xl font-bold text-foreground">Security Vulnerabilities</h2>
+                    <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded-full">
+                      {vulnerabilities.length} CVE{vulnerabilities.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {isVulnerabilitiesOpen ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6 space-y-3">
+                  {vulnerabilities.map((vuln: any, index: number) => {
+                    const severityColor = 
+                      vuln.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                      vuln.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                      vuln.severity === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                      'bg-blue-500/20 text-blue-400 border-blue-500/30';
+                    
+                    return (
+                      <div key={index} className="bg-card/30 border border-border rounded-lg p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs px-2 py-0.5 rounded border ${severityColor}`}>
+                                {vuln.severity}
+                              </span>
+                              <span className="font-mono text-sm text-foreground">{vuln.id}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              <span className="text-foreground font-medium">{vuln.package}</span>
+                              {vuln.version && <span className="text-muted-foreground"> @ {vuln.version}</span>}
+                            </p>
+                            {vuln.summary && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">{vuln.summary}</p>
+                            )}
+                            {vuln.fixed_versions && vuln.fixed_versions.length > 0 && (
+                              <p className="text-xs text-primary">
+                                Fix available: upgrade to {vuln.fixed_versions[0]}
+                              </p>
+                            )}
+                          </div>
+                          <a
+                            href={`https://osv.dev/vulnerability/${vuln.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* Reproducibility Score Breakdown - Collapsible */}
           <Collapsible
