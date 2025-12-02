@@ -1,6 +1,14 @@
 # FixEnv CLI
 
-Command-line tool for analyzing Python project dependencies for reproducibility issues and security vulnerabilities.
+Command-line tool for scanning Python repositories for:
+	•	Dependency conflicts
+	•	Missing version pins
+	•	Outdated packages
+	•	Python version mismatches
+	•	Security vulnerabilities (OSV.dev)
+	•	Reproducibility issues
+
+Powered by FixEnv + Google Gemini 2.5 Flash.
 
 ## Installation
 
@@ -81,6 +89,7 @@ on: [push, pull_request]
 jobs:
   fixenv-check:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
       
@@ -88,17 +97,27 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
+      - name: Install FixEnv CLI
+        run: npm install -g fixenv-cli
+
       - name: Run FixEnv Analysis
-        run: npx fixenv-cli scan ${{ github.server_url }}/${{ github.repository }} --json > fixenv-results.json
-      
-      - name: Check for critical issues
         run: |
-          if jq -e '.data.vulnerabilities | length > 0' fixenv-results.json > /dev/null; then
-            echo "⚠️ Security vulnerabilities detected!"
+          fixenv-cli scan https://github.com/${{ github.repository }} --json > fixenv-results.json
+
+      - name: Fail on High Severity Vulnerabilities
+        run: |
+          if jq -e '.data.vulnerabilities | map(select(.severity == "HIGH" or .severity == "CRITICAL")) | length > 0' fixenv-results.json > /dev/null; then
+            echo "❌ High severity vulnerabilities detected!"
             jq '.data.vulnerabilities' fixenv-results.json
             exit 1
           fi
+
+      - name: Upload FixEnv Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: fixenv-results
+          path: fixenv-results.json
 ```
 
 ## License
