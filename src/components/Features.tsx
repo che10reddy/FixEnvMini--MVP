@@ -6,7 +6,7 @@ const features = [
   {
     icon: Search,
     title: "Dependency Analysis",
-    description: "Scan 6 formats: requirements.txt, pyproject.toml, Pipfile, Poetry, setup.py & more.",
+    description: "Scan 6 formats: requirements.txt, pyproject.toml, Pipfile, poetry.lock, setup.py & Pipfile.lock.",
   },
   {
     icon: Sparkles,
