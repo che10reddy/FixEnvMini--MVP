@@ -87,12 +87,12 @@ const CLIDocsDialog = ({ trigger }: CLIDocsDialogProps) => {
                   size="sm"
                   variant="ghost"
                   className="h-6 px-2"
-                  onClick={() => handleCopy("fixenv-cli scan https://github.com/user/repo", setCopiedScan)}
+                  onClick={() => handleCopy("npx fixenv-cli scan https://github.com/user/repo", setCopiedScan)}
                 >
                   {copiedScan ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 </Button>
               </div>
-              <code className="text-sm text-primary font-mono">fixenv-cli scan https://github.com/user/repo</code>
+              <code className="text-sm text-primary font-mono">npx fixenv-cli scan https://github.com/user/repo</code>
             </div>
           </div>
 
