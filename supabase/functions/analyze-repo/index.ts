@@ -7,6 +7,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limiting - 10 requests per minute per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10;
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (entry.count >= RATE_LIMIT) {
+    return false;
+  }
+  
+  entry.count++;
+  return true;
+}
+
+// Stricter GitHub URL validation
+function validateGitHubUrl(url: string): { owner: string; repo: string } | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== 'github.com' && parsed.hostname !== 'www.github.com') {
+      return null;
+    }
+    const match = parsed.pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
+    if (!match) return null;
+    return { owner: match[1], repo: match[2].replace('.git', '') };
+  } catch {
+    return null;
+  }
+}
+
 // Check vulnerabilities using OSV.dev API (free, no API key required)
 async function checkVulnerabilities(packages: { name: string; version: string }[]) {
   const packagesWithVersions = packages.filter(p => p.version && p.version !== 'unversioned' && p.version !== 'unknown');
@@ -90,22 +127,44 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting check
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('cf-connecting-ip') || 
+                     'unknown';
+    
+    if (!checkRateLimit(clientIP)) {
+      console.log(`Rate limit exceeded for IP: ${clientIP}`);
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Rate limit exceeded. Please try again in a minute.' 
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { repoUrl } = await req.json();
     console.log('Analyzing repo:', repoUrl);
+
+    // Validate GitHub URL with stricter validation
+    const validatedUrl = validateGitHubUrl(repoUrl);
+    if (!validatedUrl) {
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Invalid GitHub URL. Please provide a valid github.com repository URL.' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { owner, repo: repoName } = validatedUrl;
+    console.log(`Validated repo: ${owner}/${repoName}`);
 
     // Initialize Supabase client for caching
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Extract owner and repo from GitHub URL
-    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-    if (!match) {
-      throw new Error('Invalid GitHub URL format');
-    }
-
-    const [, owner, repo] = match;
-    const repoName = repo.replace('.git', '');
 
     // Check cache first - get latest commit SHA for cache key
     console.log('Checking for cached results...');
