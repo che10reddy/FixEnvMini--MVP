@@ -5,7 +5,7 @@ const ArchitectureDiagram = () => {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section ref={ref} className="px-4 py-16 relative overflow-hidden">
+    <section ref={ref} className="px-4 pt-4 pb-16 relative overflow-hidden">
       <div className="max-w-6xl mx-auto">
         <div
           className={`text-center mb-12 transition-all duration-700 ${
