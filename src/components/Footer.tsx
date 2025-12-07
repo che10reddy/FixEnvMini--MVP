@@ -63,7 +63,7 @@ const Footer = () => {
               FixEnv Mini
             </h3>
             <p className="text-sm text-muted-foreground">
-              Analyze and fix Python dependency issues
+              Python environments, fixed
             </p>
           </div>
 
