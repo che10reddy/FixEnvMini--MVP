@@ -1,86 +1,89 @@
-**URL**: https://lovable.dev/projects/ef31a04c-4b42-4fe1-abf0-3073492ed5be
+**URL**: https://fixenvmini.lovable.app
 
-# 🛠️ FixEnv Mini - Complete Project Documentation
+---
+
+# FixEnv Mini - Complete Project Documentation
 
 ## 📋 Project Overview
 
-**FixEnv Mini** is a Python dependency analysis tool that scans GitHub repositories for dependency conflicts, missing version pins, and reproducibility issues. It uses **Google Gemini 2.5 Flash** (via Lovable AI Gateway) for intelligent analysis and generates portable `.zfix` environment snapshot files.
+**FixEnv Mini** is a Python dependency analysis tool that scans GitHub repositories for dependency conflicts, missing version pins, security vulnerabilities (CVEs), and reproducibility issues. It leverages **Google Gemini 2.5 Flash AI** for intelligent conflict detection and generates portable `.zfix` environment snapshots.
 
-flowchart TB
+### Core Purpose
+- Analyze Python environments for conflicts, security vulnerabilities, and reproducibility issues
+- Detect and parse 6 different Python dependency formats
+- Provide AI-powered fix suggestions
+- Generate exportable `.zfix` snapshots with fixed dependencies
+- Works in browser (Web UI), terminal (CLI), and CI/CD pipelines
+
+### Tagline
+> "Python environments, fixed"
+
+---
+
+## 🏗️ Architecture Overview
+
+flowchart TD
     subgraph Frontend["Frontend (React + Vite)"]
         A[Landing Page] --> B[Scanning Page]
         B --> C[Results Page]
-        C --> D[Snapshot Preview]
-        C --> E[Share Results]
+        C --> D[Fix Preview Page]
+        C --> E[Shared Results Page]
     end
 
-    subgraph Backend["Backend (Supabase Edge Functions)"]
-        F[analyze-repo]
-        G[generate-snapshot]
-        H[create-share]
-        I[get-share]
+    subgraph Backend["Backend (Lovable Cloud)"]
+        F[analyze-repo] --> G[GitHub API]
+        F --> H[Lovable AI Gateway]
+        F --> I[OSV.dev API]
+        J[generate-snapshot] --> H
+        K[create-share] --> L[(Supabase DB)]
+        M[get-share] --> L
     end
 
     subgraph External["External Services"]
-        J[GitHub API]
-        K[Lovable AI Gateway]
-        L[Google Gemini 2.5 Flash]
+        G[GitHub API]
+        H[Google Gemini 2.5 Flash]
+        I[OSV.dev CVE Database]
     end
 
-    subgraph Database["Database (Supabase)"]
-        M[(shared_results)]
-    end
-
-    A -->|Submit URL| F
-    F -->|Fetch files| J
-    F -->|AI Analysis| K
-    K --> L
-    F -->|Cache results| M
-    C -->|Generate| G
-    G -->|AI Generation| K
-    C -->|Share| H
-    H -->|Store| M
-    E -->|Fetch| I
-    I -->|Read| M
+    Frontend --> Backend
 
 ---
 
-## 🏗️ Technology Stack
+## 🛠️ Technology Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | React 18.3.1, TypeScript, Vite |
-| **Styling** | Tailwind CSS, tailwindcss-animate, shadcn/ui components |
-| **State Management** | TanStack React Query |
-| **Routing** | React Router DOM 6.30.1 |
-| **Backend** | Supabase Edge Functions (Deno) |
-| **Database** | Supabase PostgreSQL |
-| **AI** | Google Gemini 2.5 Flash via Lovable AI Gateway |
-| **Icons** | Lucide React |
+### Frontend
+| Technology | Purpose |
+|------------|---------|
+| React 18.3.1 | UI Framework |
+| TypeScript | Type Safety |
+| Vite 5.4.19 | Build Tool |
+| Tailwind CSS 3.4.17 | Styling |
+| shadcn/ui (Radix) | Component Library |
+| TanStack React Query | Data Fetching/Caching |
+| React Router DOM | Client-side Routing |
+| Lucide React | Icons |
+
+### Backend (Lovable Cloud)
+| Technology | Purpose |
+|------------|---------|
+| Supabase Edge Functions (Deno) | Serverless Backend |
+| Supabase PostgreSQL | Database |
+| Google Gemini 2.5 Flash | AI Analysis |
+| OSV.dev API | CVE Detection |
+| GitHub Raw API | Repository Fetching |
 
 ---
 
-## 📁 File Structure & Architecture
+## 📄 Page Structure & Routes
 
-### Frontend Pages (4 main + 2 utility)
-
-| Route | File | Purpose |
-|-------|------|---------|
-| `/` | `Index.tsx` | Landing page with Hero, Features, Footer |
-| `/scanning` | `Scanning.tsx` | Progress indicator during analysis |
-| `/results` | `Results.tsx` | Analysis results display |
-| `/fix-preview` | `FixPreview.tsx` | Snapshot preview & download |
-| `/share/:token` | `SharedResults.tsx` | Public shared results viewer |
-| `*` | `NotFound.tsx` | 404 page |
-
-### Backend Edge Functions (4 functions)
-
-| Function | Purpose | JWT Required |
-|----------|---------|--------------|
-| `analyze-repo` | Fetches GitHub repo, parses dependencies, calls AI | No |
-| `generate-snapshot` | Generates AI-corrected `.zfix` files | No |
-| `create-share` | Creates shareable links for results | No |
-| `get-share` | Retrieves shared results by token | No |
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `/` | `Index.tsx` | Landing page with hero, features, architecture diagram |
+| `/scanning` | `Scanning.tsx` | Progress indicator during repository analysis |
+| `/results` | `Results.tsx` | Display analysis results (issues, suggestions, vulnerabilities) |
+| `/fix-preview` | `FixPreview.tsx` | Preview and download .zfix snapshot |
+| `/share/:token` | `SharedResults.tsx` | Public shareable results page |
+| `*` | `NotFound.tsx` | 404 error page |
 
 ---
 
@@ -88,417 +91,355 @@ flowchart TB
 
 ### Color Palette (HSL)
 ```css
---background: 220 18% 8%     /* Dark background */
---foreground: 180 5% 92%     /* Light text */
---primary: 180 75% 55%       /* Teal/cyan accent */
---accent: 180 75% 55%        /* Same teal for accent */
---destructive: 0 72% 51%     /* Red for errors */
---card: 220 15% 12%          /* Slightly lighter dark */
---border: 220 15% 20%        /* Subtle borders */
---code-bg: 220 15% 10%       /* Code block background */
+--background: 220 18% 8%       /* Dark background */
+--foreground: 180 5% 92%       /* Light text */
+--primary: 180 75% 55%         /* Teal/Cyan accent */
+--accent: 180 75% 55%          /* Same as primary */
+--card: 220 15% 12%            /* Card backgrounds */
+--muted-foreground: 180 5% 65% /* Muted text */
+--destructive: 0 72% 51%       /* Red for errors */
+--border: 220 15% 20%          /* Border color */
+--code-bg: 220 15% 10%         /* Code block background */
 ```
 
 ### Typography
-- **Display Font**: Outfit (700-900 weight) - Headlines
-- **Body Font**: Inter (400-700 weight) - Body text
-- **Code Font**: JetBrains Mono - Code blocks
+- **Headings**: `Outfit` font family
+- **Body**: `Inter` font family  
+- **Code**: `JetBrains Mono` / `Fira Code`
 
 ### Custom Animations
-| Animation | Description |
-|-----------|-------------|
-| `glow-text` | Text shadow with primary color glow |
-| `glow-border` | Box shadow with primary color glow |
-| `shimmer` | Loading skeleton shimmer effect |
-| `pulse-glow` | Pulsing glow on headlines |
-| `gradient-shift` | Animated gradient background |
-| `float` | Subtle floating up/down motion |
-| `parallax` | Scroll-based parallax on hero elements |
+- `animate-gradient` - Gradient color shift
+- `animate-float` - Subtle floating effect for cards
+- `animate-pulse-glow` - Pulsing glow on headlines
+- `animate-fade-in` - Fade-in entrance animation
+- `shimmer` - Loading skeleton effect
 
 ---
 
-## 📄 Page-by-Page Deep Dive
+## 🔧 Frontend Components
 
-### 1. Landing Page (`/`)
+### Core Components
+| Component | File | Purpose |
+|-----------|------|---------|
+| `Header` | `Header.tsx` | Fixed navbar with logo (Wrench icon) and Docs link |
+| `Footer` | `Footer.tsx` | Links to GitHub, CI/CD integration dialog, contact |
+| `Hero` | `Hero.tsx` | Landing page hero with input, parallax scrolling |
+| `Features` | `Features.tsx` | 4 feature cards + 3 usage method cards |
+| `ArchitectureDiagram` | `ArchitectureDiagram.tsx` | 4-step pipeline visualization |
+| `FloatingParticles` | `FloatingParticles.tsx` | Canvas-based interactive particles |
+| `CLIDocsDialog` | `CLIDocsDialog.tsx` | Documentation dialog with CLI commands |
 
-**Components:**
-- `Header` - Fixed header with Wrench icon + "FixEnv Mini" branding
-- `Hero` - Main input section with animated particles
-- `Features` - 3 feature cards with scroll animations
-- `Footer` - Links to GitHub, Docs, Contact
+### Loading & Skeleton Components
+| Component | Purpose |
+|-----------|---------|
+| `ScanningSkeleton` | Skeleton loader for scanning page |
+| `ResultsSkeleton` | Skeleton loader for results page |
+| `SnapshotProgressDialog` | Progress modal for snapshot generation |
 
-**Hero Features:**
-- GitHub URL input field with icon
-- "Scan Repository" button with glow effect
-- `FloatingParticles` - Canvas-based particle animation
-  - 50 particles with mouse repulsion effect
-  - Connection lines between nearby particles
-  - Teal color (`rgba(76, 201, 240)`)
-- Parallax scrolling on title, subtitle, and input section
-- Subtitle fades out on scroll
-
-**Feature Cards:**
-1. **Dependency Analysis** (Search icon) - Detect missing/conflicting versions
-2. **AI Fix Suggestions** (Sparkles icon) - AI-powered recommendations
-3. **Reproducible Snapshot** (FileText icon) - Generate .zfix files
+### Feature Cards Content
+1. **Dependency Analysis** - "Scan 6 formats: requirements.txt, pyproject.toml, Pipfile, poetry.lock, setup.py & Pipfile.lock"
+2. **AI Fix Suggestions** - "25+ conflict patterns analyzed by Google Gemini for version pins, upgrades & fixes"
+3. **Reproducible Snapshot** - "Export portable .zfix artifacts with fixed dependencies and dual scores"
+4. **Security Scanning** - "Real-time CVE detection via Google OSV with CRITICAL/HIGH/MEDIUM/LOW ratings"
 
 ---
 
-### 2. Scanning Page (`/scanning`)
+## ⚡ Edge Functions (Backend)
 
-**Purpose:** Shows real-time progress while analyzing repository
+### 1. `analyze-repo` (Main Analysis)
+**Location**: `supabase/functions/analyze-repo/index.ts`
+**Rate Limit**: 10 requests/minute/IP
+**JWT Required**: No
 
-**Progress Steps (6 total):**
-1. Fetching repository
-2. Detecting dependency files
-3. Parsing dependencies
-4. Checking for version conflicts
-5. Sending data to AI Analyzer
-6. Preparing your results
+**Functionality**:
+1. Validates GitHub URL (strict hostname check)
+2. Checks cache (24-hour TTL based on commit SHA)
+3. Fetches 6 dependency file types in parallel
+4. Detects Python version from 5+ sources
+5. Calls Gemini AI for analysis with 25+ conflict patterns
+6. Queries OSV.dev for CVE detection
+7. Calculates reproducibility score (weighted algorithm)
+8. Caches results in database
 
-**UX Features:**
-- Auto-progress through steps 1-4 (800ms each)
-- Steps 5-6 wait for actual edge function response
-- Progress bar: 70% during AI analysis → 85% → 100%
-- Timeout warning after 15 seconds: "Large repository detected..."
-- `ScanningSkeleton` loading state
+**Supported Dependency Formats**:
+- `requirements.txt` (pip)
+- `pyproject.toml` (Poetry/PEP 517)
+- `poetry.lock`
+- `Pipfile` (Pipenv)
+- `Pipfile.lock`
+- `setup.py` (Setuptools)
 
-**Data Flow:**
-```typescript
-// Receives from navigation state:
-location.state.repoUrl
+**Python Version Detection Sources**:
+- `pyproject.toml`
+- `.python-version`
+- `runtime.txt`
+- `.github/workflows/*.yml`
 
-// Sends to Results page:
-{
-  analysisData,      // AI analysis results
-  rawRequirements,   // Original file content
-  detectedFormats,   // Array of detected formats
-  foundFiles,        // Array of found dependency files
-  pythonVersion,     // Detected Python version
-  pythonVersionSource, // Where Python version was found
-  repositoryUrl      // Original URL
-}
+**Reproducibility Score Algorithm**:
 ```
-
----
-
-### 3. Results Page (`/results`)
-
-**Purpose:** Display analysis results and provide actions
-
-**Sections:**
-1. **Hero Section** - Title + detected format badges + Python version badge
-2. **Python Version Info Card** - Shows detected Python version and source
-3. **Success State** - If no issues found, shows celebration UI
-4. **Issues Summary Card** - Lists detected issues with severity (High/Medium/Low)
-5. **AI Suggestions Card** - Bullet list of AI recommendations
-6. **Dependency Diff Viewer** - Before → After split view
-7. **Action Buttons** - Generate Snapshot, Share Results
-8. **CI/CD Guide** - GitHub Actions integration example
-
-**Severity Styling:**
-| Severity | Icon | Color |
-|----------|------|-------|
-| High | AlertTriangle | Red (destructive) |
-| Medium | AlertCircle | Yellow |
-| Low | Info | Blue |
-
-**Actions:**
-- **Generate Snapshot** → Opens `SnapshotProgressDialog` → Navigates to `/fix-preview`
-- **Share Results** → Creates share link via `create-share` function → Copy to clipboard
-
----
-
-### 4. Snapshot Preview Page (`/fix-preview`)
-
-**Purpose:** Preview and download the `.zfix` environment snapshot
-
-**Data Received:**
-```typescript
-{
-  zfixData,           // Complete .zfix JSON structure
-  fixedContent,       // AI-generated fixed dependency file
-  filename,           // "environment.zfix"
-  format,             // ".zfix"
-  fixesApplied,       // Number of fixes
-  repositoryUrl,      // Original URL
-  reproducibilityScore, // 0-100 score
-  issues,             // Issues array
-  dependencyDiff      // Dependency changes array
-}
-```
-
-**Sections (Top to Bottom):**
-
-1. **Hero Section** - "Environment Snapshot (.zfix)"
-
-2. **Snapshot Metadata Card:**
-   - Repository URL
-   - Python Version
-   - Generated At (timestamp)
-   - Detected Formats (badges)
-
-3. **Analysis Summary Card:**
-   - Reproducibility Score (%)
-   - Issues Detected (count)
-   - AI Suggestions (count)
-
-4. **Reproducibility Score Breakdown (Collapsible):**
-   - SVG Circular Gauge (color-coded)
-     - ≥80%: Teal/Primary
-     - 50-79%: Yellow
-     - <50%: Red
-   - "What improved your score" (positive points)
-   - "What lowered your score" (negative points)
-   - Perfect score message: "🎉 Perfect score!"
-
-5. **Fixed Dependencies (Collapsible):**
-   - Syntax-highlighted code preview
-   - Line numbers
-   - Color-coded: comments (gray), pinned versions (teal)
-
-6. **Full .zfix Structure (Collapsible):**
-   - Raw JSON preview
-   - "Copy JSON" button
-
-7. **Action Buttons:**
-   - "Download Snapshot" → Creates blob, triggers download
-   - "Return Home" → Navigate to `/`
-
-8. **Info Card** - Explains .zfix file format
-
-**Score Points Generation Logic (`generatePoints()`):**
-```typescript
-// POSITIVE POINTS:
-- No dependency issues detected
-- All packages properly configured
-- X packages properly pinned
-- Dependencies are documented
-- No critical issues found
-- No conflicting dependencies
-
-// NEGATIVE POINTS:
-- X packages missing version pins
-- X high-severity issues detected
-- X medium-severity issues found
-- X minor issues present
+Base Score: 50 points
++ Version Pinning: 0-30 points (based on % pinned)
++ No Conflicts: 0-25 points
++ Package Health: 0-15 points (no outdated packages)
+- Critical CVEs: -10 points each (max -20)
+- High CVEs: -5 points each (max -10)
+= Final Score: 0-100 (capped)
 ```
 
 ---
 
-### 5. Shared Results Page (`/share/:token`)
+### 2. `generate-snapshot` (Snapshot Generation)
+**Location**: `supabase/functions/generate-snapshot/index.ts`
+**Rate Limit**: 5 requests/minute/IP (stricter for AI-heavy)
+**JWT Required**: No
 
-**Purpose:** Public view of shared analysis results
+**Functionality**:
+1. Receives analysis data from frontend
+2. Determines output format (requirements.txt, pyproject.toml, or Pipfile)
+3. Calls Gemini AI to generate complete fixed dependency file
+4. Builds `.zfix` JSON structure with all metadata
+5. Returns downloadable artifact
 
-**Features:**
-- Fetches results via `get-share` edge function
-- Displays view count badge
-- Shows creation date
-- Same layout as Results page (issues, suggestions, diff)
-- CTA: "Try FixEnv on Your Repository"
-
----
-
-## ⚙️ Backend Edge Functions - Deep Dive
-
-### 1. `analyze-repo` Function
-
-**Flow:**
-```
-1. Parse GitHub URL → Extract owner/repo
-2. Check cache (24-hour TTL by commit SHA)
-3. If cache hit → Return cached result
-4. Detect branch (main vs master)
-5. Fetch dependency files in PARALLEL
-6. Detect Python version
-7. Call Lovable AI Gateway for analysis
-8. Calculate reproducibility score
-9. Cache result → Return
-```
-
-**Supported Dependency Files:**
-| File | Type | Format Label |
-|------|------|--------------|
-| requirements.txt | pip | Requirements.txt |
-| pyproject.toml | poetry | Poetry (pyproject.toml) |
-| poetry.lock | poetry-lock | Poetry Lock |
-| Pipfile | pipenv | Pipenv |
-| Pipfile.lock | pipenv-lock | Pipenv Lock |
-| setup.py | setuptools | Setup.py |
-
-**Python Version Detection Sources (Priority Order):**
-1. pyproject.toml (already fetched)
-2. .python-version (most common)
-3. runtime.txt
-4. .github/workflows/ci.yml
-5. .github/workflows/main.yml
-6. .github/workflows/test.yml
-
-**AI Prompt Knowledge Base (25+ patterns):**
-- Missing version pins
-- Python compatibility conflicts (pandas <1.5 + Python 3.11)
-- Dependency conflicts (scipy 1.5.x + numpy 1.26.x)
-- Breaking upgrades (SQLAlchemy 2.0 + Flask-SQLAlchemy <3)
-- Deprecated packages (sklearn → scikit-learn)
-- CUDA mismatches
-
-**Reproducibility Score Algorithm:**
-```
-Base: 50 points
-
-Version Pinning (0-30 points):
-- 100% pinned = +30
-- Proportional to pinned percentage
-
-Conflicts (0-25 points):
-- 0 conflicts = +25
-- ≤2 conflicts = +15
-- ≤5 conflicts = +5
-
-Package Health (0-15 points):
-- 0 outdated = +15
-- ≤3 outdated = +10
-- ≤6 outdated = +5
-
-Maximum: 100 (capped)
-```
-
-**AI Response Format:**
-```json
-{
-  "issues": [{
-    "title": "Missing version pin",
-    "package": "numpy",
-    "severity": "high",
-    "category": "missing_pin",
-    "description": "..."
-  }],
-  "suggestions": ["Pin numpy to 1.26.2..."],
-  "dependencyDiff": [{
-    "package": "numpy",
-    "before": "unversioned",
-    "after": "1.26.2"
-  }]
-}
-```
-
----
-
-### 2. `generate-snapshot` Function
-
-**Purpose:** Generate AI-corrected dependency file and .zfix structure
-
-**Input:**
-```typescript
-{
-  issues, suggestions, dependencyDiff,
-  detectedFormats, primaryFormat, pythonVersion,
-  rawRequirements, repositoryUrl, reproducibilityScore
-}
-```
-
-**Output Format Detection:**
-- Poetry/pyproject.toml → `pyproject.toml`
-- Pipenv/Pipfile → `Pipfile`
-- Default → `requirements.txt`
-
-**AI Prompt Features:**
-- Generates COMPLETE file with ALL dependencies
-- Adds inline comments explaining each fix
-- Auto-header with timestamp and Python version
-- Format-specific templates
-
-**.zfix Structure:**
+**.zfix File Structure**:
 ```json
 {
   "version": "1.0",
-  "generated_at": "2025-12-01T...",
+  "generated_at": "ISO timestamp",
   "generator": "FixEnv Mini",
   "metadata": {
     "repository_url": "...",
-    "python_version": "3.11",
-    "detected_formats": ["Requirements.txt"],
-    "primary_format": "Requirements.txt",
-    "scan_timestamp": "..."
+    "python_version": "...",
+    "detected_formats": [...],
+    "primary_format": "..."
   },
   "analysis": {
     "reproducibility_score": 85,
     "total_issues": 3,
     "issues": [...],
     "suggestions": [...],
-    "dependency_changes": [...]
+    "dependency_changes": [...],
+    "vulnerabilities": [...],
+    "vulnerability_count": 2
   },
   "fixed_dependencies": {
     "format": "requirements.txt",
-    "content": "# Auto-fixed by FixEnv Mini..."
+    "content": "# Fixed file content..."
   }
 }
 ```
 
 ---
 
-### 3. `create-share` Function
+### 3. `create-share` (Create Shareable Link)
+**Location**: `supabase/functions/create-share/index.ts`
+**Rate Limit**: 20 requests/minute/IP
+**JWT Required**: No
 
-**Purpose:** Store analysis results and generate shareable token
-
-**Token Generation:**
-- 12-character alphanumeric string
-- Uniqueness check (up to 5 retries)
-
-**Storage:** Inserts into `shared_results` table
+**Functionality**:
+1. Generates unique 12-character share token
+2. Stores analysis data in `shared_results` table
+3. Returns shareable URL
 
 ---
 
-### 4. `get-share` Function
+### 4. `get-share` (Retrieve Shared Results)
+**Location**: `supabase/functions/get-share/index.ts`
+**Rate Limit**: 30 requests/minute/IP
+**JWT Required**: No
 
-**Purpose:** Retrieve shared results and increment view count
-
-**Flow:**
-1. Fetch by `share_token`
-2. If found → Increment `view_count`
-3. Return analysis data, repository URL, view count, created date
+**Functionality**:
+1. Validates share token
+2. Fetches analysis data from database
+3. Increments view count
+4. Returns full analysis data
 
 ---
 
 ## 🗄️ Database Schema
 
-### `shared_results` Table
+### Table: `shared_results`
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `id` | uuid | `gen_random_uuid()` | Primary key |
+| `created_at` | timestamptz | `now()` | Creation timestamp |
+| `share_token` | text | - | Unique 12-char token for sharing |
+| `repository_url` | text | - | GitHub repository URL (or cache key) |
+| `analysis_data` | jsonb | - | Complete analysis results |
+| `view_count` | integer | 0 | Number of times viewed |
+| `expires_at` | timestamptz | - | Cache expiration (24h for cache entries) |
 
-| Column | Type | Nullable | Default |
-|--------|------|----------|---------|
-| `id` | uuid | NO | `gen_random_uuid()` |
-| `share_token` | text | NO | - |
-| `analysis_data` | jsonb | NO | - |
-| `repository_url` | text | NO | - |
-| `created_at` | timestamptz | NO | `now()` |
-| `view_count` | integer | NO | `0` |
-| `expires_at` | timestamptz | YES | - |
+### RLS Policies
+- `Anyone can view shared results` - SELECT with `USING (true)`
+- `Anyone can create shared results` - INSERT with `WITH CHECK (true)`
+- `Anyone can update view count` - UPDATE with `USING (true)`
 
-### RLS Policies (Public Access)
-
-| Policy | Command | Condition |
-|--------|---------|-----------|
-| Anyone can view shared results | SELECT | `true` |
-| Anyone can create shared results | INSERT | - |
-| Anyone can update view count | UPDATE | `true` |
+> ⚠️ **Security Note**: Current RLS policies are permissive. All operations go through edge functions with service role keys, so direct client access should be restricted.
 
 ---
 
-## 🎭 UI Components
+## 🔐 Security Features
 
-### Skeleton Loaders
-- `ScanningSkeleton` - 5 step placeholders with shimmer
-- `ResultsSkeleton` - Full results page placeholder
+### Implemented Security
+1. **Rate Limiting** - All edge functions have IP-based rate limits
+2. **URL Validation** - Strict GitHub hostname validation using URL parser
+3. **CORS Headers** - Proper cross-origin configuration
+4. **Service Role Keys** - Database writes use service role, not anon key
+5. **No Direct API Key Exposure** - All AI calls go through edge functions
 
-### Dialogs
-- `SnapshotProgressDialog` - Simple spinner with "30 seconds" message
-
-### Animations
-- `PageTransition` - Fade in/out between routes
-- `useScrollAnimation` - IntersectionObserver-based visibility detection
+### Security Scanning
+- **OSV.dev Integration** - Free CVE detection (no API key required)
+- **Severity Levels** - CRITICAL, HIGH, MEDIUM, LOW based on CVSS scores
+- **Security Score** - 0-100 score based on vulnerability count/severity
 
 ---
 
-## 🔧 Configuration Files
+## 📦 CLI Tool
+
+**Package**: `fixenv-cli` (npm)
+**Location**: `cli/` directory
+
+### Installation
+```bash
+npm install -g fixenv-cli
+# or use directly
+npx fixenv-cli scan https://github.com/user/repo
+```
+
+### Usage
+```bash
+# Basic scan
+npx fixenv-cli scan https://github.com/pallets/flask
+
+# JSON output (for CI/CD)
+npx fixenv-cli scan https://github.com/pallets/flask --json
+
+# Help
+npx fixenv-cli --help
+```
+
+### CLI Output
+```
+🔧 FixEnv - Python Environment Analysis
+──────────────────────────────────────────────────
+Repository: pallets/flask
+Python: ^3.8
+Formats: Requirements.txt, Setup.py
+
+📊 Reproducibility Score: 87%
+⚠️  Issues Found: 3
+🔒 Vulnerabilities: 1 (High)
+```
+
+---
+
+## 🔄 CI/CD Integration (GitHub Actions)
+
+The footer includes a ready-to-use GitHub Actions workflow:
+
+```yaml
+name: FixEnv Security Check
+on: [push, pull_request]
+
+jobs:
+  fixenv-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run FixEnv Analysis
+        run: |
+          REPO_URL="https://github.com/${{ github.repository }}"
+          npx fixenv-cli scan $REPO_URL --json > fixenv-report.json
+
+      - name: Check for Critical Vulnerabilities
+        run: |
+          CRITICAL=$(cat fixenv-report.json | jq '.vulnerabilities | map(select(.severity == "CRITICAL" or .severity == "HIGH")) | length')
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "❌ Found $CRITICAL critical/high severity vulnerabilities"
+            exit 1
+          fi
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixenv-report
+          path: fixenv-report.json
+```
+
+---
+
+## 🎯 AI Knowledge Base (Conflict Patterns)
+
+The AI prompt includes 25+ real-world dependency conflict patterns:
+
+1. **Missing version pins** - `numpy` without version
+2. **Python compatibility** - pandas <1.5 breaks on Python 3.11+
+3. **Breaking upgrades** - SQLAlchemy 2.0 + Flask-SQLAlchemy <3
+4. **Deprecated packages** - `sklearn` → `scikit-learn`
+5. **CUDA/GPU mismatches** - torch versions need matching CUDA
+6. **Indirect conflicts** - transformers 4.33+ requires tokenizers 0.14+
+7. **TensorFlow** - TensorFlow 2.3 requires Python 3.6-3.8
+8. **Pydantic** - Pydantic 2.0 + FastAPI <0.100
+
+---
+
+## 📁 Project File Structure
+
+```
+├── cli/                          # CLI tool
+│   ├── index.js                  # CLI entry point
+│   ├── package.json
+│   └── README.md
+├── src/
+│   ├── App.tsx                   # Main app with routing
+│   ├── main.tsx                  # Entry point
+│   ├── index.css                 # Global styles & design system
+│   ├── components/
+│   │   ├── ui/                   # shadcn/ui components
+│   │   ├── Header.tsx
+│   │   ├── Footer.tsx
+│   │   ├── Hero.tsx
+│   │   ├── Features.tsx
+│   │   ├── ArchitectureDiagram.tsx
+│   │   ├── FloatingParticles.tsx
+│   │   ├── CLIDocsDialog.tsx
+│   │   ├── ScanningSkeleton.tsx
+│   │   ├── ResultsSkeleton.tsx
+│   │   └── SnapshotProgressDialog.tsx
+│   ├── pages/
+│   │   ├── Index.tsx
+│   │   ├── Scanning.tsx
+│   │   ├── Results.tsx
+│   │   ├── FixPreview.tsx
+│   │   ├── SharedResults.tsx
+│   │   └── NotFound.tsx
+│   ├── hooks/
+│   │   ├── use-scroll-animation.tsx
+│   │   ├── use-toast.ts
+│   │   └── use-mobile.tsx
+│   └── integrations/supabase/
+│       ├── client.ts              # Auto-generated
+│       └── types.ts               # Auto-generated
+├── supabase/
+│   ├── config.toml                # Function configuration
+│   └── functions/
+│       ├── analyze-repo/index.ts
+│       ├── generate-snapshot/index.ts
+│       ├── create-share/index.ts
+│       └── get-share/index.ts
+├── tailwind.config.ts
+├── package.json
+└── vite.config.ts
+```
+
+---
+
+## ⚙️ Configuration Files
 
 ### `supabase/config.toml`
 ```toml
@@ -517,6 +458,62 @@ verify_jwt = false
 verify_jwt = false
 ```
 
-### Secrets Available
-- `LOVABLE_API_KEY` - For AI Gateway access
-- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+### Available Secrets
+- `LOVABLE_API_KEY` - AI Gateway access (auto-provisioned)
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_DB_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+
+---
+
+## 🚀 User Flow
+
+sequenceDiagram
+    participant U as User
+    participant L as Landing Page
+    participant S as Scanning Page
+    participant E as Edge Function
+    participant G as GitHub API
+    participant A as Gemini AI
+    participant O as OSV.dev
+    participant R as Results Page
+    participant F as Fix Preview
+
+    U->>L: Enter GitHub URL
+    U->>L: Click "Scan Repository"
+    L->>S: Navigate with repoUrl
+    S->>E: Call analyze-repo
+    E->>G: Fetch dependency files (parallel)
+    E->>G: Detect Python version
+    E->>A: AI analysis with patterns
+    E->>O: Check CVEs
+    E-->>S: Return analysis
+    S->>R: Navigate with results
+    U->>R: View issues & suggestions
+    U->>R: Click "Generate Snapshot"
+    R->>E: Call generate-snapshot
+    E->>A: Generate fixed file
+    E-->>R: Return .zfix data
+    R->>F: Navigate to preview
+    U->>F: Download .zfix file
+
+---
+
+## 📊 Performance Optimizations
+
+1. **Parallel File Fetching** - All 6 dependency files fetched simultaneously via `Promise.all()`
+2. **Early Python Version Exit** - Stops checking once version found
+3. **24-Hour Result Caching** - Cache key uses commit SHA for accuracy
+4. **Optimized AI Prompt** - Reduced from ~3,500 to ~1,200 characters
+5. **IP-Based Rate Limiting** - Prevents API abuse
+
+---
+
+### Long-Term Vision (Avastha)
+- Full application runtime state capture into portable capsules
+- AI-assisted environment diagnosis and repair
+- Cross-platform support (macOS, Windows, Linux)
+- Enterprise reproducibility and auditability
+
